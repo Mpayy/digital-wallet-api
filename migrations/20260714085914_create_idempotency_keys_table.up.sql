@@ -1,0 +1,13 @@
+CREATE TABLE idempotency_keys (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `key` VARCHAR(100) NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL,
+    endpoint VARCHAR(50) NOT NULL,
+    request_hash CHAR(64) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PROCESSING',
+    response_status INT NULL,
+    response_body TEXT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_idempotency_key (`key`)
+) ENGINE=InnoDB;

@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+
+main
+*.exe
+/tmp/
+
+coverage.out
+coverage.html
+
+.idea/
+.vscode/
+
+.DS_Store
