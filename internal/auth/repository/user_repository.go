@@ -16,15 +16,15 @@ type UserRepository interface {
 	FindByID(ctx context.Context, id uint) (*entity.User, error)
 }
 
-type UserRepositoryImpl struct {
+type userRepositoryImpl struct {
 	DB *gorm.DB
 }
 
 func NewUserRepository(db *gorm.DB) UserRepository {
-	return &UserRepositoryImpl{DB: db}
+	return &userRepositoryImpl{DB: db}
 }
 
-func (r *UserRepositoryImpl) Create(ctx context.Context, user *entity.User) error {
+func (r *userRepositoryImpl) Create(ctx context.Context, user *entity.User) error {
 	err := r.DB.WithContext(ctx).Create(user).Error
 	if err != nil {
 		var mysqlErr *mysql.MySQLError
@@ -36,7 +36,7 @@ func (r *UserRepositoryImpl) Create(ctx context.Context, user *entity.User) erro
 	return nil
 }
 
-func (r *UserRepositoryImpl) FindByEmail(ctx context.Context, email string) (*entity.User, error) {
+func (r *userRepositoryImpl) FindByEmail(ctx context.Context, email string) (*entity.User, error) {
 	var user entity.User
 	err := r.DB.WithContext(ctx).Where("email = ?", email).First(&user).Error
 	if err != nil {
@@ -48,7 +48,7 @@ func (r *UserRepositoryImpl) FindByEmail(ctx context.Context, email string) (*en
 	return &user, nil
 }
 
-func (r *UserRepositoryImpl) FindByID(ctx context.Context, id uint) (*entity.User, error) {
+func (r *userRepositoryImpl) FindByID(ctx context.Context, id uint) (*entity.User, error) {
 	var user entity.User
 	err := r.DB.WithContext(ctx).Where("id = ?", id).First(&user).Error
 	if err != nil {
