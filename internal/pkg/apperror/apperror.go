@@ -8,17 +8,37 @@ import (
 )
 
 var (
-	ErrInternalServer     = errors.New("INTERNAL_SERVER_ERROR")
-	ErrDuplicatedKey      = errors.New("DUPLICATED_KEY")
+	ErrInternalServer = errors.New("INTERNAL_SERVER_ERROR")
+	ErrDuplicatedKey  = errors.New("DUPLICATED_KEY")
+	ErrRecordNotFound = errors.New("RECORD_NOT_FOUND")
+	ErrInvalidID      = errors.New("INVALID_ID")
+	ErrBadRequest     = errors.New("BAD_REQUEST")
+
+	// Auth
 	ErrDuplicatedEmail    = errors.New("EMAIL_ALREADY_EXISTS")
-	ErrRecordNotFound     = errors.New("RECORD_NOT_FOUND")
 	ErrUserNotFound       = errors.New("USER_NOT_FOUND")
 	ErrInvalidCredentials = errors.New("INVALID_CREDENTIALS")
 	ErrInvalidToken       = errors.New("INVALID_TOKEN")
 	ErrExpiredToken       = errors.New("TOKEN_HAS_EXPIRED")
 	ErrUnauthorized       = errors.New("UNAUTHORIZED")
-	ErrInvalidID          = errors.New("INVALID_ID")
-	ErrBadRequest         = errors.New("BAD_REQUEST")
+
+	// Wallet
+	ErrWalletNotFound         = errors.New("WALLET_NOT_FOUND")
+	ErrInsufficientBalance    = errors.New("INSUFFICIENT_BALANCE")
+	ErrInvalidAmount          = errors.New("INVALID_AMOUNT")
+	ErrSelfTransferNotAllowed = errors.New("SELF_TRANSFER_NOT_ALLOWED")
+	ErrRecipientNotFound      = errors.New("RECIPIENT_NOT_FOUND")
+	ErrUserHasWalletAlready   = errors.New("USER_HAS_WALLET_ALREADY")
+
+	// Transaction
+	ErrTransactionNotFound     = errors.New("TRANSACTION_NOT_FOUND")
+	ErrTransactionAccessDenied = errors.New("TRANSACTION_ACCESS_DENIED") // GET /transactions/:id milik user lain
+
+	// Idempotency
+	ErrMissingIdempotencyKey  = errors.New("MISSING_IDEMPOTENCY_KEY")
+	ErrIdempotencyKeyConflict = errors.New("IDEMPOTENCY_KEY_CONFLICT")
+	ErrRequestInProgress      = errors.New("REQUEST_IN_PROGRESS")
+	ErrPreviousAttemptFailed  = errors.New("PREVIOUS_ATTEMPT_FAILED")
 )
 
 func ExtractValidationErrors(err error) map[string]string {

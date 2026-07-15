@@ -6,10 +6,11 @@ import (
 	"errors"
 
 	"github.com/Mpayy/digital-wallet-api/internal/auth/dto"
-	"github.com/Mpayy/digital-wallet-api/internal/auth/entity"
-	"github.com/Mpayy/digital-wallet-api/internal/auth/repository"
+	authEntity "github.com/Mpayy/digital-wallet-api/internal/auth/entity"
+	authRepo "github.com/Mpayy/digital-wallet-api/internal/auth/repository"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
+	"github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
 	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -23,14 +24,15 @@ type AuthUsecase interface {
 }
 
 type authUsecaseImpl struct {
-	AuthRepo repository.AuthRepository
-	RedisCli *redis.Client
-	JwtToken jwt.JwtToken
-	Log      *logrus.Logger
+	AuthRepo      authRepo.AuthRepository
+	WalletUsecase usecase.WalletUsecase
+	RedisCli      *redis.Client
+	JwtToken      jwt.JwtToken
+	Log           *logrus.Logger
 }
 
-func NewAuthUsecase(authRepo repository.AuthRepository, redisCli *redis.Client, jwtToken jwt.JwtToken, log *logrus.Logger) AuthUsecase {
-	return &authUsecaseImpl{AuthRepo: authRepo, RedisCli: redisCli, JwtToken: jwtToken, Log: log}
+func NewAuthUsecase(authRepo authRepo.AuthRepository, walletUsecase usecase.WalletUsecase, redisCli *redis.Client, jwtToken jwt.JwtToken, log *logrus.Logger) AuthUsecase {
+	return &authUsecaseImpl{AuthRepo: authRepo, WalletUsecase: walletUsecase, RedisCli: redisCli, JwtToken: jwtToken, Log: log}
 }
 
 func (u *authUsecaseImpl) Register(ctx context.Context, request dto.RegisterRequest) (*dto.RegisterResponse, error) {
@@ -42,13 +44,13 @@ func (u *authUsecaseImpl) Register(ctx context.Context, request dto.RegisterRequ
 		return nil, apperror.ErrInternalServer
 	}
 
-	newUser := &entity.User{
+	user := &authEntity.User{
 		Name:     request.Name,
 		Email:    request.Email,
 		Password: string(hashPassword),
 	}
 
-	err = u.AuthRepo.Create(ctx, newUser)
+	err = u.AuthRepo.Create(ctx, user)
 	if err != nil {
 		if errors.Is(err, apperror.ErrDuplicatedKey) {
 			u.Log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Warn("Failed to create user")
@@ -58,11 +60,16 @@ func (u *authUsecaseImpl) Register(ctx context.Context, request dto.RegisterRequ
 		return nil, apperror.ErrInternalServer
 	}
 
-	u.Log.WithFields(logrus.Fields{"user_id": newUser.ID, "email": newUser.Email}).Info("User registered successfully")
+	wallet, err := u.WalletUsecase.CreateWallet(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	u.Log.WithFields(logrus.Fields{"user_id": user.ID, "email": user.Email, "wallet_id": wallet.ID}).Info("User registered successfully")
 	return &dto.RegisterResponse{
-		ID:    newUser.ID,
-		Name:  newUser.Name,
-		Email: newUser.Email,
+		ID:    user.ID,
+		Name:  user.Name,
+		Email: user.Email,
 	}, nil
 }
 

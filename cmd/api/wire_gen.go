@@ -10,10 +10,13 @@ import (
 	"github.com/Mpayy/digital-wallet-api/internal/auth/handler"
 	"github.com/Mpayy/digital-wallet-api/internal/auth/middleware"
 	"github.com/Mpayy/digital-wallet-api/internal/auth/repository"
-	"github.com/Mpayy/digital-wallet-api/internal/auth/usecase"
+	usecase2 "github.com/Mpayy/digital-wallet-api/internal/auth/usecase"
 	"github.com/Mpayy/digital-wallet-api/internal/config"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
 	middleware2 "github.com/Mpayy/digital-wallet-api/internal/pkg/middleware"
+	"github.com/Mpayy/digital-wallet-api/internal/pkg/tx"
+	repository2 "github.com/Mpayy/digital-wallet-api/internal/wallet/repository"
+	"github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
 	"github.com/google/wire"
 )
 
@@ -27,8 +30,10 @@ func InitializeAPI() *Application {
 	client := config.NewRedisClient(viper)
 	app := config.NewApp(engine, logger, viper, db, client)
 	authRepository := repository.NewAuthRepository(db)
+	walletRepository := repository2.NewWalletRepository(db)
+	walletUsecase := usecase.NewWalletUsecase(walletRepository, logger)
 	jwtToken := jwt.NewJwtToken(viper)
-	authUsecase := usecase.NewAuthUsecase(authRepository, client, jwtToken, logger)
+	authUsecase := usecase2.NewAuthUsecase(authRepository, walletUsecase, client, jwtToken, logger)
 	validate := config.NewValidator()
 	authHandler := authhandler.NewAuthHandler(authUsecase, validate, logger)
 	jwtMiddleware := middleware.NewJwtMiddleware(jwtToken, client)
@@ -39,8 +44,12 @@ func InitializeAPI() *Application {
 
 // wire.go:
 
-var authSet = wire.NewSet(repository.NewAuthRepository, usecase.NewAuthUsecase, authhandler.NewAuthHandler)
+var authSet = wire.NewSet(repository.NewAuthRepository, usecase2.NewAuthUsecase, authhandler.NewAuthHandler)
+
+var walletSet = wire.NewSet(repository2.NewWalletRepository, usecase.NewWalletUsecase)
 
 var middlewareSet = wire.NewSet(middleware.NewJwtMiddleware, middleware2.LoggerMiddleware)
 
 var infraSet = wire.NewSet(config.NewViper, config.NewValidator, config.NewRedisClient, config.NewLogrus, config.NewGorm, config.NewGin, config.NewApp)
+
+var pkgSet = wire.NewSet(jwt.NewJwtToken, tx.NewTx)
