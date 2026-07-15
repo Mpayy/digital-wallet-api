@@ -8,7 +8,6 @@ import (
 	"github.com/Mpayy/digital-wallet-api/internal/auth/dto"
 	"github.com/Mpayy/digital-wallet-api/internal/auth/entity"
 	"github.com/Mpayy/digital-wallet-api/internal/auth/repository"
-	"github.com/Mpayy/digital-wallet-api/internal/config"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
 	"github.com/redis/go-redis/v9"
@@ -24,22 +23,22 @@ type AuthUsecase interface {
 }
 
 type authUsecaseImpl struct {
-	userRepo repository.UserRepository
-	redisCli *redis.Client
-	jwtToken jwt.JwtToken
-	log      *logrus.Logger
+	AuthRepo repository.AuthRepository
+	RedisCli *redis.Client
+	JwtToken jwt.JwtToken
+	Log      *logrus.Logger
 }
 
-func NewUserUsecase(userRepo repository.UserRepository, redisCli *redis.Client, jwtToken jwt.JwtToken) AuthUsecase {
-	return &authUsecaseImpl{userRepo: userRepo, redisCli: redisCli, jwtToken: jwtToken}
+func NewAuthUsecase(authRepo repository.AuthRepository, redisCli *redis.Client, jwtToken jwt.JwtToken, log *logrus.Logger) AuthUsecase {
+	return &authUsecaseImpl{AuthRepo: authRepo, RedisCli: redisCli, JwtToken: jwtToken, Log: log}
 }
 
 func (u *authUsecaseImpl) Register(ctx context.Context, request dto.RegisterRequest) (*dto.RegisterResponse, error) {
-	u.log.WithField("email", request.Email).Debug("Attempting to register user")
+	u.Log.WithField("email", request.Email).Debug("Attempting to register user")
 
 	hashPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
 	if err != nil {
-		u.log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Error("Failed to hash password")
+		u.Log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Error("Failed to hash password")
 		return nil, apperror.ErrInternalServer
 	}
 
@@ -49,17 +48,17 @@ func (u *authUsecaseImpl) Register(ctx context.Context, request dto.RegisterRequ
 		Password: string(hashPassword),
 	}
 
-	err = u.userRepo.Create(ctx, newUser)
+	err = u.AuthRepo.Create(ctx, newUser)
 	if err != nil {
 		if errors.Is(err, apperror.ErrDuplicatedKey) {
-			u.log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Warn("Failed to create user")
+			u.Log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Warn("Failed to create user")
 			return nil, apperror.ErrDuplicatedEmail
 		}
-		u.log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Error("Failed to create user")
+		u.Log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Error("Failed to create user")
 		return nil, apperror.ErrInternalServer
 	}
 
-	u.log.WithFields(logrus.Fields{"user_id": newUser.ID, "email": newUser.Email}).Info("User registered successfully")
+	u.Log.WithFields(logrus.Fields{"user_id": newUser.ID, "email": newUser.Email}).Info("User registered successfully")
 	return &dto.RegisterResponse{
 		ID:    newUser.ID,
 		Name:  newUser.Name,
@@ -68,21 +67,21 @@ func (u *authUsecaseImpl) Register(ctx context.Context, request dto.RegisterRequ
 }
 
 func (u *authUsecaseImpl) Login(ctx context.Context, request dto.LoginRequest) (*dto.LoginResponse, error) {
-	u.log.WithField("email", request.Email).Debug("Attempting to login user")
+	u.Log.WithField("email", request.Email).Debug("Attempting to login user")
 
-	user, err := u.userRepo.FindByEmail(ctx, request.Email)
+	user, err := u.AuthRepo.FindByEmail(ctx, request.Email)
 	if err != nil {
 		if errors.Is(err, apperror.ErrRecordNotFound) {
-			u.log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Warn("Failed to find user")
+			u.Log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Warn("Failed to find user")
 			return nil, apperror.ErrInvalidCredentials
 		}
-		u.log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Error("Failed to find user")
+		u.Log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Error("Failed to find user")
 		return nil, apperror.ErrInternalServer
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(request.Password))
 	if err != nil {
-		u.log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Warn("Failed to compare password")
+		u.Log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Warn("Failed to compare password")
 		return nil, apperror.ErrInvalidCredentials
 	}
 
@@ -90,57 +89,57 @@ func (u *authUsecaseImpl) Login(ctx context.Context, request dto.LoginRequest) (
 		ID: user.ID,
 	}
 
-	token, err := u.jwtToken.Create(auth)
+	token, err := u.JwtToken.Create(auth)
 	if err != nil {
-		u.log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Error("Failed to create token")
+		u.Log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Error("Failed to create token")
 		return nil, apperror.ErrInternalServer
 	}
 
 	authData, err := json.Marshal(auth)
 	if err != nil {
-		u.log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Error("Failed to marshal auth data")
+		u.Log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Error("Failed to marshal auth data")
 		return nil, apperror.ErrInternalServer
 	}
 
-	err = u.redisCli.Set(ctx, config.AuthPrefix+token, authData, jwt.TokenDuration).Err()
+	err = u.RedisCli.Set(ctx, token, authData, jwt.TokenDuration).Err()
 	if err != nil {
-		u.log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Error("Failed to set auth data in redis")
+		u.Log.WithFields(logrus.Fields{"email": request.Email, "error": err}).Error("Failed to set auth data in redis")
 		return nil, apperror.ErrInternalServer
 	}
 
-	u.log.WithFields(logrus.Fields{"user_id": user.ID, "email": user.Email}).Info("User logged in successfully")
+	u.Log.WithFields(logrus.Fields{"user_id": user.ID, "email": user.Email}).Info("User logged in successfully")
 	return &dto.LoginResponse{
 		Token: token,
 	}, nil
 }
 
 func (u *authUsecaseImpl) Logout(ctx context.Context, token string) error {
-	u.log.WithField("token", token).Debug("Attempting to logout user")
+	u.Log.WithField("token", token).Debug("Attempting to logout user")
 
-	err := u.redisCli.Del(ctx, config.AuthPrefix+token).Err()
+	err := u.RedisCli.Del(ctx, token).Err()
 	if err != nil {
-		u.log.WithFields(logrus.Fields{"token": token, "error": err}).Error("Failed to delete auth data from redis")
+		u.Log.WithFields(logrus.Fields{"token": token, "error": err}).Error("Failed to delete auth data from redis")
 		return apperror.ErrInternalServer
 	}
 
-	u.log.WithFields(logrus.Fields{"token": token}).Info("User logged out successfully")
+	u.Log.WithFields(logrus.Fields{"token": token}).Info("User logged out successfully")
 	return nil
 }
 
 func (u *authUsecaseImpl) GetUserByID(ctx context.Context, id uint) (*dto.UserInfo, error) {
-	u.log.WithField("user_id", id).Debug("Attempting to get user by ID")
+	u.Log.WithField("user_id", id).Debug("Attempting to get user by ID")
 
-	user, err := u.userRepo.FindByID(ctx, id)
+	user, err := u.AuthRepo.FindByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, apperror.ErrRecordNotFound) {
-			u.log.WithFields(logrus.Fields{"user_id": id, "error": err}).Warn("Failed to find user")
+			u.Log.WithFields(logrus.Fields{"user_id": id, "error": err}).Warn("Failed to find user")
 			return nil, apperror.ErrUserNotFound
 		}
-		u.log.WithFields(logrus.Fields{"user_id": id, "error": err}).Error("Failed to find user")
+		u.Log.WithFields(logrus.Fields{"user_id": id, "error": err}).Error("Failed to find user")
 		return nil, apperror.ErrInternalServer
 	}
 
-	u.log.WithFields(logrus.Fields{"user_id": user.ID, "email": user.Email}).Info("User found successfully")
+	u.Log.WithFields(logrus.Fields{"user_id": user.ID, "email": user.Email}).Info("User found successfully")
 	return &dto.UserInfo{
 		Name: user.Name,
 	}, nil

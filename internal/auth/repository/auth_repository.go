@@ -6,29 +6,27 @@ import (
 
 	"github.com/Mpayy/digital-wallet-api/internal/auth/entity"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
-	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 )
 
-type UserRepository interface {
+type AuthRepository interface {
 	Create(ctx context.Context, user *entity.User) error
 	FindByEmail(ctx context.Context, email string) (*entity.User, error)
 	FindByID(ctx context.Context, id uint) (*entity.User, error)
 }
 
-type userRepositoryImpl struct {
+type authRepositoryImpl struct {
 	DB *gorm.DB
 }
 
-func NewUserRepository(db *gorm.DB) UserRepository {
-	return &userRepositoryImpl{DB: db}
+func NewAuthRepository(db *gorm.DB) AuthRepository {
+	return &authRepositoryImpl{DB: db}
 }
 
-func (r *userRepositoryImpl) Create(ctx context.Context, user *entity.User) error {
+func (r *authRepositoryImpl) Create(ctx context.Context, user *entity.User) error {
 	err := r.DB.WithContext(ctx).Create(user).Error
 	if err != nil {
-		var mysqlErr *mysql.MySQLError
-		if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return apperror.ErrDuplicatedKey
 		}
 		return err
@@ -36,7 +34,7 @@ func (r *userRepositoryImpl) Create(ctx context.Context, user *entity.User) erro
 	return nil
 }
 
-func (r *userRepositoryImpl) FindByEmail(ctx context.Context, email string) (*entity.User, error) {
+func (r *authRepositoryImpl) FindByEmail(ctx context.Context, email string) (*entity.User, error) {
 	var user entity.User
 	err := r.DB.WithContext(ctx).Where("email = ?", email).First(&user).Error
 	if err != nil {
@@ -48,7 +46,7 @@ func (r *userRepositoryImpl) FindByEmail(ctx context.Context, email string) (*en
 	return &user, nil
 }
 
-func (r *userRepositoryImpl) FindByID(ctx context.Context, id uint) (*entity.User, error) {
+func (r *authRepositoryImpl) FindByID(ctx context.Context, id uint) (*entity.User, error) {
 	var user entity.User
 	err := r.DB.WithContext(ctx).Where("id = ?", id).First(&user).Error
 	if err != nil {

@@ -4,8 +4,25 @@
 package main
 
 import (
+	authhandler "github.com/Mpayy/digital-wallet-api/internal/auth/handler"
+	jwtmiddleware "github.com/Mpayy/digital-wallet-api/internal/auth/middleware"
+	authrepo "github.com/Mpayy/digital-wallet-api/internal/auth/repository"
+	authusecase "github.com/Mpayy/digital-wallet-api/internal/auth/usecase"
 	"github.com/Mpayy/digital-wallet-api/internal/config"
+	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
+	loggermiddleware "github.com/Mpayy/digital-wallet-api/internal/pkg/middleware"
 	"github.com/google/wire"
+)
+
+var authSet = wire.NewSet(
+	authrepo.NewAuthRepository,
+	authusecase.NewAuthUsecase,
+	authhandler.NewAuthHandler,
+)
+
+var middlewareSet = wire.NewSet(
+	jwtmiddleware.NewJwtMiddleware,
+	loggermiddleware.LoggerMiddleware,
 )
 
 var infraSet = wire.NewSet(
@@ -21,6 +38,9 @@ var infraSet = wire.NewSet(
 func InitializeAPI() *Application {
 	wire.Build(
 		infraSet,
+		authSet,
+		middlewareSet,
+		jwt.NewJwtToken,
 		NewRouter,
 		NewApplication,
 	)

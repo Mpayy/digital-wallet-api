@@ -7,7 +7,13 @@
 package main
 
 import (
+	"github.com/Mpayy/digital-wallet-api/internal/auth/handler"
+	"github.com/Mpayy/digital-wallet-api/internal/auth/middleware"
+	"github.com/Mpayy/digital-wallet-api/internal/auth/repository"
+	"github.com/Mpayy/digital-wallet-api/internal/auth/usecase"
 	"github.com/Mpayy/digital-wallet-api/internal/config"
+	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
+	middleware2 "github.com/Mpayy/digital-wallet-api/internal/pkg/middleware"
 	"github.com/google/wire"
 )
 
@@ -15,16 +21,26 @@ import (
 
 func InitializeAPI() *Application {
 	viper := config.NewViper()
+	engine := config.NewGin(viper)
 	logger := config.NewLogrus(viper)
-	engine := config.NewGin(viper, logger)
 	db := config.NewGorm(viper, logger)
 	client := config.NewRedisClient(viper)
 	app := config.NewApp(engine, logger, viper, db, client)
-	router := NewRouter(engine)
+	authRepository := repository.NewAuthRepository(db)
+	jwtToken := jwt.NewJwtToken(viper)
+	authUsecase := usecase.NewAuthUsecase(authRepository, client, jwtToken, logger)
+	validate := config.NewValidator()
+	authHandler := authhandler.NewAuthHandler(authUsecase, validate, logger)
+	jwtMiddleware := middleware.NewJwtMiddleware(jwtToken, client)
+	router := NewRouter(engine, logger, authHandler, jwtMiddleware)
 	application := NewApplication(app, router)
 	return application
 }
 
 // wire.go:
+
+var authSet = wire.NewSet(repository.NewAuthRepository, usecase.NewAuthUsecase, authhandler.NewAuthHandler)
+
+var middlewareSet = wire.NewSet(middleware.NewJwtMiddleware, middleware2.LoggerMiddleware)
 
 var infraSet = wire.NewSet(config.NewViper, config.NewValidator, config.NewRedisClient, config.NewLogrus, config.NewGorm, config.NewGin, config.NewApp)
