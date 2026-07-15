@@ -1,32 +1,37 @@
 package main
 
-import "github.com/gin-gonic/gin"
+import (
+	authhandler "github.com/Mpayy/digital-wallet-api/internal/auth/handler"
+	jwtMiddleware "github.com/Mpayy/digital-wallet-api/internal/auth/middleware"
+	loggerMiddleware "github.com/Mpayy/digital-wallet-api/internal/pkg/middleware"
+	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
+)
 
 type Router struct {
-	App *gin.Engine
+	App           *gin.Engine
+	Log           *logrus.Logger
+	AuthHandler   authhandler.AuthHandler
+	JwtMiddleware *jwtMiddleware.JwtMiddleware
 }
 
-func NewRouter(app *gin.Engine) *Router {
+func NewRouter(app *gin.Engine, log *logrus.Logger, authHandler authhandler.AuthHandler, jwtMiddleware *jwtMiddleware.JwtMiddleware) *Router {
 	return &Router{
-		App: app,
+		App:           app,
+		Log:           log,
+		AuthHandler:   authHandler,
+		JwtMiddleware: jwtMiddleware,
 	}
 }
 
 func (r *Router) Setup() {
-	v1 := r.App.Group("/api/v1")
-	{
-		auth := v1.Group("/auth")
-		auth.POST("/register")
-		auth.POST("/login")
-		auth.POST("/logout")
+	r.App.Use(loggerMiddleware.LoggerMiddleware(r.Log))
 
-		wallets := v1.Group("/wallets")
-		wallets.GET("/me")
-		wallets.POST("/topup")
-		wallets.POST("/transfer")
+	public := r.App.Group("/api/v1")
+	public.POST("/register", r.AuthHandler.Register)
+	public.POST("/login", r.AuthHandler.Login)
 
-		transactions := v1.Group("/transactions")
-		transactions.GET("")
-		transactions.GET("/:id")
-	}
+	private := r.App.Group("/api/v1")
+	private.Use(r.JwtMiddleware.AuthMiddleware())
+	private.POST("/logout", r.AuthHandler.Logout)
 }

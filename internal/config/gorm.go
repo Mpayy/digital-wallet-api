@@ -37,6 +37,7 @@ func NewGorm(config *viper.Viper, log *logrus.Logger) *gorm.DB {
 				ParameterizedQueries:      true,
 				LogLevel:                  gormLogLevel,
 			}),
+			TranslateError: true,
 		})
 
 		if err != nil {

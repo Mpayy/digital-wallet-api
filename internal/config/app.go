@@ -9,19 +9,19 @@ import (
 )
 
 type App struct {
-	Engine *gin.Engine
+	App    *gin.Engine
 	Log    *logrus.Logger
 	Config *viper.Viper
 	DB     *gorm.DB
-	Client *redis.Client
+	Redis  *redis.Client
 }
 
-func NewApp(gin *gin.Engine, logrus *logrus.Logger, viper *viper.Viper, gorm *gorm.DB, redis *redis.Client) *App {
+func NewApp(app *gin.Engine, logrus *logrus.Logger, viper *viper.Viper, gorm *gorm.DB, redis *redis.Client) *App {
 	return &App{
-		Engine: gin,
+		App:    app,
 		Log:    logrus,
 		Config: viper,
 		DB:     gorm,
-		Client: redis,
+		Redis:  redis,
 	}
 }
