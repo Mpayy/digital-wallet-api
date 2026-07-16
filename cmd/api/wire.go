@@ -11,7 +11,7 @@ import (
 	"github.com/Mpayy/digital-wallet-api/internal/config"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
 	loggermiddleware "github.com/Mpayy/digital-wallet-api/internal/pkg/middleware"
-	"github.com/Mpayy/digital-wallet-api/internal/pkg/tx"
+	"github.com/Mpayy/digital-wallet-api/internal/pkg/txmanager"
 	walletrepo "github.com/Mpayy/digital-wallet-api/internal/wallet/repository"
 	walletusecase "github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
 	"github.com/google/wire"
@@ -45,7 +45,7 @@ var infraSet = wire.NewSet(
 
 var pkgSet = wire.NewSet(
 	jwt.NewJwtToken,
-	tx.NewTx,
+	txmanager.NewTxManager,
 )
 
 func InitializeAPI() *Application {
