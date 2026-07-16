@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
-	"github.com/Mpayy/digital-wallet-api/internal/pkg/tx"
+	"github.com/Mpayy/digital-wallet-api/internal/pkg/txmanager"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/entity"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -27,7 +27,7 @@ func NewWalletRepository(db *gorm.DB) WalletRepository {
 }
 
 func (r *walletRepositoryImpl) GetTx(ctx context.Context) *gorm.DB {
-	if tx, ok := tx.GetTxFromCtx(ctx); ok {
+	if tx, ok := txmanager.GetTxFromCtx(ctx); ok {
 		return tx.WithContext(ctx)
 	}
 	return r.db.WithContext(ctx)

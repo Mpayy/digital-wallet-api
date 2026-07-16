@@ -1,4 +1,4 @@
-package tx
+package txmanager
 
 import (
 	"context"
@@ -10,19 +10,19 @@ type contextKey string
 
 const txKey contextKey = "tx"
 
-type Tx interface {
+type TxManager interface {
 	WithTx(ctx context.Context, fn func(ctx context.Context) error) error
 }
 
-type txImpl struct {
+type txManagerImpl struct {
 	db *gorm.DB
 }
 
-func NewTx(db *gorm.DB) Tx {
-	return &txImpl{db: db}
+func NewTxManager(db *gorm.DB) TxManager {
+	return &txManagerImpl{db: db}
 }
 
-func (t *txImpl) WithTx(ctx context.Context, fn func(ctx context.Context) error) error {
+func (t *txManagerImpl) WithTx(ctx context.Context, fn func(ctx context.Context) error) error {
 	return t.db.Transaction(func(tx *gorm.DB) error {
 		txCtx := context.WithValue(ctx, txKey, tx)
 		return fn(txCtx)
