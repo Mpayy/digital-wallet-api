@@ -8,11 +8,13 @@ import (
 )
 
 var (
-	ErrInternalServer = errors.New("INTERNAL_SERVER_ERROR")
-	ErrDuplicatedKey  = errors.New("DUPLICATED_KEY")
-	ErrRecordNotFound = errors.New("RECORD_NOT_FOUND")
-	ErrInvalidID      = errors.New("INVALID_ID")
-	ErrBadRequest     = errors.New("BAD_REQUEST")
+	// DB
+	ErrInternalServer      = errors.New("INTERNAL_SERVER_ERROR")
+	ErrDuplicatedKey       = errors.New("DUPLICATED_KEY")
+	ErrRecordNotFound      = errors.New("RECORD_NOT_FOUND")
+	ErrInvalidID           = errors.New("INVALID_ID")
+	ErrBadRequest          = errors.New("BAD_REQUEST")
+	ErrNoActiveTransaction = errors.New("NO_ACTIVE_TRANSACTION")
 
 	// Auth
 	ErrDuplicatedEmail    = errors.New("EMAIL_ALREADY_EXISTS")

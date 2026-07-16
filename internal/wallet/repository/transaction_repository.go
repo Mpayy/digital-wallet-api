@@ -5,14 +5,13 @@ import (
 	"errors"
 
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
-	"github.com/Mpayy/digital-wallet-api/internal/pkg/txmanager"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/dto"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/entity"
 	"gorm.io/gorm"
 )
 
 type TransactionRepository interface {
-	Create(ctx context.Context, transaction *entity.Transaction) error
+	Create(tx *gorm.DB, transaction *entity.Transaction) error
 	FindByID(ctx context.Context, id uint) (*entity.Transaction, error)
 	FindByWalletID(ctx context.Context, walletID uint, filter dto.TransactionFilter) ([]entity.Transaction, int64, error)
 }
@@ -25,15 +24,8 @@ func NewTransactionRepository(db *gorm.DB) TransactionRepository {
 	return &transactionRepositoryImpl{db: db}
 }
 
-func (r *transactionRepositoryImpl) GetTx(ctx context.Context) *gorm.DB {
-	if tx, ok := txmanager.GetTxFromCtx(ctx); ok {
-		return tx.WithContext(ctx)
-	}
-	return r.db.WithContext(ctx)
-}
-
-func (r *transactionRepositoryImpl) Create(ctx context.Context, transaction *entity.Transaction) error {
-	err := r.GetTx(ctx).Create(transaction).Error
+func (r *transactionRepositoryImpl) Create(tx *gorm.DB, transaction *entity.Transaction) error {
+	err := tx.Create(transaction).Error
 	if err != nil {
 		return err
 	}
@@ -42,7 +34,7 @@ func (r *transactionRepositoryImpl) Create(ctx context.Context, transaction *ent
 
 func (r *transactionRepositoryImpl) FindByID(ctx context.Context, id uint) (*entity.Transaction, error) {
 	var transaction entity.Transaction
-	err := r.GetTx(ctx).First(&transaction, id).Error
+	err := r.db.WithContext(ctx).First(&transaction, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperror.ErrRecordNotFound
@@ -53,23 +45,25 @@ func (r *transactionRepositoryImpl) FindByID(ctx context.Context, id uint) (*ent
 }
 
 func (r *transactionRepositoryImpl) FindByWalletID(ctx context.Context, walletID uint, filter dto.TransactionFilter) ([]entity.Transaction, int64, error) {
-	var result []entity.Transaction
+	applyFilter := func(q *gorm.DB) *gorm.DB {
+		q = q.Where("wallet_id = ?", walletID)
+		if filter.Type != "" {
+			q = q.Where("type = ?", filter.Type)
+		}
+
+		if filter.StartDate != "" {
+			q = q.Where("created_at >= ?", filter.StartDate+" 00:00:00")
+		}
+
+		if filter.EndDate != "" {
+			q = q.Where("created_at <= ?", filter.EndDate+" 23:59:59")
+		}
+
+		return q
+	}
+
 	var total int64
-	query := r.GetTx(ctx).Model(&entity.Transaction{}).Where("wallet_id = ?", walletID)
-
-	if filter.Type != "" {
-		query = query.Where("type = ?", filter.Type)
-	}
-
-	if filter.StartDate != "" {
-		query = query.Where("created_at >= ?", filter.StartDate+" 00:00:00")
-	}
-	if filter.EndDate != "" {
-		query = query.Where("created_at <= ?", filter.EndDate+" 23:59:59")
-	}
-
-	err := query.Count(&total).Error
-	if err != nil {
+	if err := applyFilter(r.db.WithContext(ctx).Model(&entity.Transaction{})).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -82,8 +76,10 @@ func (r *transactionRepositoryImpl) FindByWalletID(ctx context.Context, walletID
 	}
 
 	offset := (filter.Page - 1) * filter.Limit
-	err = query.Offset(offset).Limit(filter.Limit).Find(&result).Error
-	if err != nil {
+
+	var result []entity.Transaction
+	q := applyFilter(r.db.WithContext(ctx).Model(&entity.Transaction{}))
+	if err := q.Order("created_at DESC").Offset(offset).Limit(filter.Limit).Find(&result).Error; err != nil {
 		return nil, 0, err
 	}
 
