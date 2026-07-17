@@ -15,6 +15,7 @@ type WalletRepository interface {
 	FindByUserID(ctx context.Context, userID uint) (*entity.Wallet, error)
 	LockByID(tx *gorm.DB, walletID uint) (*entity.Wallet, error)
 	Save(tx *gorm.DB, wallet *entity.Wallet) error
+	WithTx(ctx context.Context, fn func(tx *gorm.DB) error) error
 }
 
 type walletRepositoryImpl struct {
@@ -23,6 +24,15 @@ type walletRepositoryImpl struct {
 
 func NewWalletRepository(db *gorm.DB) WalletRepository {
 	return &walletRepositoryImpl{db: db}
+}
+
+func (r *walletRepositoryImpl) WithTx(ctx context.Context, fn func(tx *gorm.DB) error) error {
+	err := r.db.WithContext(ctx).Transaction(fn)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *walletRepositoryImpl) Create(ctx context.Context, wallet *entity.Wallet) error {

@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
@@ -9,21 +10,24 @@ import (
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/entity"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/repository"
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 type WalletUsecase interface {
 	CreateWallet(ctx context.Context, userID uint) (*entity.Wallet, error)
 	GetWalletByUserID(ctx context.Context, userID uint) (*dto.WalletResponse, error)
-	TopUp(ctx context.Context, userID uint, req dto.TopUpRequest, idemKey string) (*dto.TopUpResponse, error)
+	TopUp(ctx context.Context, userID uint, request dto.TopUpRequest, idemKey string) (*dto.TopUpResponse, error)
 }
 
 type walletUsecaseImpl struct {
-	walletRepo repository.WalletRepository
-	log        *logrus.Logger
+	walletRepo      repository.WalletRepository
+	transactionRepo repository.TransactionRepository
+	idemService     IdempotencyService
+	log             *logrus.Logger
 }
 
-func NewWalletUsecase(walletRepo repository.WalletRepository, log *logrus.Logger) WalletUsecase {
-	return &walletUsecaseImpl{walletRepo: walletRepo, log: log}
+func NewWalletUsecase(walletRepo repository.WalletRepository, transactionRepo repository.TransactionRepository, idemService IdempotencyService, log *logrus.Logger) WalletUsecase {
+	return &walletUsecaseImpl{walletRepo: walletRepo, transactionRepo: transactionRepo, idemService: idemService, log: log}
 }
 
 func (u *walletUsecaseImpl) CreateWallet(ctx context.Context, userID uint) (*entity.Wallet, error) {
@@ -84,7 +88,103 @@ func (u *walletUsecaseImpl) GetWalletByUserID(ctx context.Context, userID uint) 
 	}, nil
 }
 
-func (u *walletUsecaseImpl) TopUp(ctx context.Context, userID uint, req dto.TopUpRequest, idemKey string) (*dto.TopUpResponse, error) {
-	// TODO: implementasi top up
-	return &dto.TopUpResponse{}, nil
+func (u *walletUsecaseImpl) TopUp(ctx context.Context, userID uint, request dto.TopUpRequest, idemKey string) (*dto.TopUpResponse, error) {
+	u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey}).Debug("Attempting to top up wallet")
+
+	if request.Amount <= 0 {
+		u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey}).Warn("Failed to top up wallet: invalid amount")
+		return nil, apperror.ErrInvalidAmount
+	}
+
+	wallet, err := u.walletRepo.FindByUserID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, apperror.ErrRecordNotFound) {
+			u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey}).Warn("Failed to top up wallet: wallet not found")
+			return nil, apperror.ErrWalletNotFound
+		}
+		u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey, "error": err}).Error("Failed to top up wallet: internal server error")
+		return nil, apperror.ErrInternalServer
+	}
+
+	claimed, cachedBody, err := u.idemService.Claim(ctx, idemKey, userID, string(entity.TxTypeTopup), request)
+	if err != nil {
+		return nil, err
+	}
+
+	if !claimed {
+		var cached dto.TopUpResponse
+		if err := json.Unmarshal([]byte(cachedBody), &cached); err != nil {
+			u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey, "error": err}).Error("Failed to unmarshal cached response")
+			return nil, apperror.ErrInternalServer
+		}
+
+		u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey}).Info("Top up wallet: duplicate request detected, returning cached response")
+		return &cached, nil
+	}
+
+	var result *dto.TopUpResponse
+	txErr := u.walletRepo.WithTx(ctx, func(tx *gorm.DB) error {
+		lockWallet, err := u.walletRepo.LockByID(tx, wallet.ID)
+		if err != nil {
+			if errors.Is(err, apperror.ErrRecordNotFound) {
+				u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey}).Warn("Failed to top up wallet: wallet not found")
+				return apperror.ErrWalletNotFound
+			}
+			u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey, "error": err}).Error("Failed to top up wallet: internal server error")
+			return apperror.ErrInternalServer
+		}
+
+		balanceBefore := lockWallet.Balance
+
+		lockWallet.Balance += request.Amount
+
+		err = u.walletRepo.Save(tx, lockWallet)
+		if err != nil {
+			u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey, "error": err}).Error("Failed to top up wallet: internal server error")
+			return apperror.ErrInternalServer
+		}
+
+		transaction := &entity.Transaction{
+			WalletID:      lockWallet.ID,
+			Type:          entity.TxTypeTopup,
+			Amount:        request.Amount,
+			BalanceBefore: balanceBefore,
+			BalanceAfter:  lockWallet.Balance,
+			Status:        entity.TxStatusSuccess,
+		}
+
+		err = u.transactionRepo.Create(tx, transaction)
+		if err != nil {
+			u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey, "error": err}).Error("Failed to top up wallet: internal server error")
+			return apperror.ErrInternalServer
+		}
+
+		result = &dto.TopUpResponse{
+			TransactionID: transaction.ID,
+			WalletID:      transaction.WalletID,
+			Type:          string(transaction.Type),
+			Amount:        transaction.Amount,
+			BalanceBefore: transaction.BalanceBefore,
+			BalanceAfter:  transaction.BalanceAfter,
+			Status:        string(transaction.Status),
+			CreatedAt:     transaction.CreatedAt,
+		}
+
+		return nil
+	})
+
+	if txErr != nil {
+		err := u.idemService.MarkFailed(ctx, idemKey)
+		if err != nil {
+			return nil, err
+		}
+		return nil, txErr
+	}
+
+	err = u.idemService.Complete(ctx, idemKey, result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
