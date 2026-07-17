@@ -31,7 +31,10 @@ func InitializeAPI() *Application {
 	app := config.NewApp(engine, logger, viper, db, client)
 	authRepository := repository.NewAuthRepository(db)
 	walletRepository := repository2.NewWalletRepository(db)
-	walletUsecase := usecase.NewWalletUsecase(walletRepository, logger)
+	transactionRepository := repository2.NewTransactionRepository(db)
+	idempotencyRepository := repository2.NewIdempotencyRepository(db)
+	idempotencyService := usecase.NewIdempotencyService(logger, idempotencyRepository)
+	walletUsecase := usecase.NewWalletUsecase(walletRepository, transactionRepository, idempotencyService, logger)
 	jwtToken := jwt.NewJwtToken(viper)
 	authUsecase := usecase2.NewAuthUsecase(authRepository, walletUsecase, client, jwtToken, logger)
 	validate := config.NewValidator()
@@ -47,6 +50,10 @@ func InitializeAPI() *Application {
 var authSet = wire.NewSet(repository.NewAuthRepository, usecase2.NewAuthUsecase, authhandler.NewAuthHandler)
 
 var walletSet = wire.NewSet(repository2.NewWalletRepository, usecase.NewWalletUsecase)
+
+var transactionSet = wire.NewSet(repository2.NewTransactionRepository)
+
+var idempotencySet = wire.NewSet(repository2.NewIdempotencyRepository, usecase.NewIdempotencyService)
 
 var middlewareSet = wire.NewSet(middleware.NewJwtMiddleware, middleware2.LoggerMiddleware)
 

@@ -28,6 +28,15 @@ var walletSet = wire.NewSet(
 	walletusecase.NewWalletUsecase,
 )
 
+var transactionSet = wire.NewSet(
+	walletrepo.NewTransactionRepository,
+)
+
+var idempotencySet = wire.NewSet(
+	walletrepo.NewIdempotencyRepository,
+	walletusecase.NewIdempotencyService,
+)
+
 var middlewareSet = wire.NewSet(
 	jwtmiddleware.NewJwtMiddleware,
 	loggermiddleware.LoggerMiddleware,
@@ -53,6 +62,8 @@ func InitializeAPI() *Application {
 		infraSet,
 		authSet,
 		walletSet,
+		transactionSet,
+		idempotencySet,
 		middlewareSet,
 		pkgSet,
 		NewRouter,
