@@ -14,6 +14,7 @@ import (
 	"github.com/Mpayy/digital-wallet-api/internal/config"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
 	middleware2 "github.com/Mpayy/digital-wallet-api/internal/pkg/middleware"
+	"github.com/Mpayy/digital-wallet-api/internal/wallet/handler"
 	repository2 "github.com/Mpayy/digital-wallet-api/internal/wallet/repository"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
 	"github.com/google/wire"
@@ -38,8 +39,11 @@ func InitializeAPI() *Application {
 	authUsecase := usecase2.NewAuthUsecase(authRepository, walletUsecase, client, jwtToken, logger)
 	validate := config.NewValidator()
 	authHandler := authhandler.NewAuthHandler(authUsecase, validate, logger)
+	transferRepository := repository2.NewTransferRepository(db)
+	transferUsecase := usecase.NewTransferUsecase(transferRepository, walletRepository, idempotencyService, transactionRepository, logger)
+	walletHandler := handler.NewWalletHandler(walletUsecase, transferUsecase)
 	jwtMiddleware := middleware.NewJwtMiddleware(jwtToken, client)
-	router := NewRouter(engine, logger, authHandler, jwtMiddleware)
+	router := NewRouter(engine, logger, authHandler, walletHandler, jwtMiddleware)
 	application := NewApplication(app, router)
 	return application
 }
@@ -48,11 +52,13 @@ func InitializeAPI() *Application {
 
 var authSet = wire.NewSet(repository.NewAuthRepository, usecase2.NewAuthUsecase, authhandler.NewAuthHandler)
 
-var walletSet = wire.NewSet(repository2.NewWalletRepository, usecase.NewWalletUsecase)
+var walletSet = wire.NewSet(repository2.NewWalletRepository, usecase.NewWalletUsecase, handler.NewWalletHandler)
 
 var transactionSet = wire.NewSet(repository2.NewTransactionRepository)
 
 var idempotencySet = wire.NewSet(repository2.NewIdempotencyRepository, usecase.NewIdempotencyService)
+
+var transferSet = wire.NewSet(repository2.NewTransferRepository, usecase.NewTransferUsecase)
 
 var middlewareSet = wire.NewSet(middleware.NewJwtMiddleware, middleware2.LoggerMiddleware)
 
