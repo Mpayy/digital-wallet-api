@@ -26,7 +26,7 @@ type transferUsecaseImpl struct {
 	log             *logrus.Logger
 }
 
-func NewTransferUsecaseImpl(transferRepo repository.TransferRepository, walletRepo repository.WalletRepository, idemService IdempotencyService, transactionRepo repository.TransactionRepository, log *logrus.Logger) TransferUsecase {
+func NewTransferUsecase(transferRepo repository.TransferRepository, walletRepo repository.WalletRepository, idemService IdempotencyService, transactionRepo repository.TransactionRepository, log *logrus.Logger) TransferUsecase {
 	return &transferUsecaseImpl{
 		transferRepo:    transferRepo,
 		walletRepo:      walletRepo,

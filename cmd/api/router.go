@@ -1,9 +1,10 @@
 package main
 
 import (
-	authhandler "github.com/Mpayy/digital-wallet-api/internal/auth/handler"
+	authHandler "github.com/Mpayy/digital-wallet-api/internal/auth/handler"
 	jwtMiddleware "github.com/Mpayy/digital-wallet-api/internal/auth/middleware"
 	loggerMiddleware "github.com/Mpayy/digital-wallet-api/internal/pkg/middleware"
+	walletHandler "github.com/Mpayy/digital-wallet-api/internal/wallet/handler"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -11,27 +12,34 @@ import (
 type Router struct {
 	App           *gin.Engine
 	Log           *logrus.Logger
-	AuthHandler   authhandler.AuthHandler
+	AuthHandler   authHandler.AuthHandler
+	WalletHandler walletHandler.WalletHandler
 	JwtMiddleware *jwtMiddleware.JwtMiddleware
 }
 
-func NewRouter(app *gin.Engine, log *logrus.Logger, authHandler authhandler.AuthHandler, jwtMiddleware *jwtMiddleware.JwtMiddleware) *Router {
+func NewRouter(app *gin.Engine, log *logrus.Logger, authHandler authHandler.AuthHandler, walletHandler walletHandler.WalletHandler, jwtMiddleware *jwtMiddleware.JwtMiddleware) *Router {
 	return &Router{
 		App:           app,
 		Log:           log,
 		AuthHandler:   authHandler,
+		WalletHandler: walletHandler,
 		JwtMiddleware: jwtMiddleware,
 	}
 }
 
 func (r *Router) Setup() {
-	r.App.Use(loggerMiddleware.LoggerMiddleware(r.Log))
+	v1 := r.App.Group("/api/v1")
+	v1.Use(loggerMiddleware.LoggerMiddleware(r.Log))
+	{
+		auth := v1.Group("/auth")
+		auth.POST("/register", r.AuthHandler.Register)
+		auth.POST("/login", r.AuthHandler.Login)
+		auth.POST("/logout", r.JwtMiddleware.AuthMiddleware(), r.AuthHandler.Logout)
 
-	public := r.App.Group("/api/v1")
-	public.POST("/register", r.AuthHandler.Register)
-	public.POST("/login", r.AuthHandler.Login)
+		wallets := v1.Group("/wallets", r.JwtMiddleware.AuthMiddleware())
+		wallets.GET("/me", r.WalletHandler.GetMyWallet)
+		wallets.POST("/top-up", r.WalletHandler.TopUp)
+		wallets.POST("/transfer", r.WalletHandler.Transfer)
+	}
 
-	private := r.App.Group("/api/v1")
-	private.Use(r.JwtMiddleware.AuthMiddleware())
-	private.POST("/logout", r.AuthHandler.Logout)
 }

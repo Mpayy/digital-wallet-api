@@ -4,41 +4,48 @@
 package main
 
 import (
-	authhandler "github.com/Mpayy/digital-wallet-api/internal/auth/handler"
-	jwtmiddleware "github.com/Mpayy/digital-wallet-api/internal/auth/middleware"
-	authrepo "github.com/Mpayy/digital-wallet-api/internal/auth/repository"
-	authusecase "github.com/Mpayy/digital-wallet-api/internal/auth/usecase"
+	authHandler "github.com/Mpayy/digital-wallet-api/internal/auth/handler"
+	jwtMiddleware "github.com/Mpayy/digital-wallet-api/internal/auth/middleware"
+	authRepo "github.com/Mpayy/digital-wallet-api/internal/auth/repository"
+	authUsecase "github.com/Mpayy/digital-wallet-api/internal/auth/usecase"
 	"github.com/Mpayy/digital-wallet-api/internal/config"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
-	loggermiddleware "github.com/Mpayy/digital-wallet-api/internal/pkg/middleware"
-	walletrepo "github.com/Mpayy/digital-wallet-api/internal/wallet/repository"
-	walletusecase "github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
+	loggerMiddleware "github.com/Mpayy/digital-wallet-api/internal/pkg/middleware"
+	walletRepo "github.com/Mpayy/digital-wallet-api/internal/wallet/repository"
+	walletUsecase "github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
+	walletHandler "github.com/Mpayy/digital-wallet-api/internal/wallet/handler"
 	"github.com/google/wire"
 )
 
 var authSet = wire.NewSet(
-	authrepo.NewAuthRepository,
-	authusecase.NewAuthUsecase,
-	authhandler.NewAuthHandler,
+	authRepo.NewAuthRepository,
+	authUsecase.NewAuthUsecase,
+	authHandler.NewAuthHandler,
 )
 
 var walletSet = wire.NewSet(
-	walletrepo.NewWalletRepository,
-	walletusecase.NewWalletUsecase,
+	walletRepo.NewWalletRepository,
+	walletUsecase.NewWalletUsecase,
+	walletHandler.NewWalletHandler,
 )
 
 var transactionSet = wire.NewSet(
-	walletrepo.NewTransactionRepository,
+	walletRepo.NewTransactionRepository,
 )
 
 var idempotencySet = wire.NewSet(
-	walletrepo.NewIdempotencyRepository,
-	walletusecase.NewIdempotencyService,
+	walletRepo.NewIdempotencyRepository,
+	walletUsecase.NewIdempotencyService,
+)
+
+var transferSet = wire.NewSet(
+	walletRepo.NewTransferRepository,
+	walletUsecase.NewTransferUsecase,
 )
 
 var middlewareSet = wire.NewSet(
-	jwtmiddleware.NewJwtMiddleware,
-	loggermiddleware.LoggerMiddleware,
+	jwtMiddleware.NewJwtMiddleware,
+	loggerMiddleware.LoggerMiddleware,
 )
 
 var infraSet = wire.NewSet(
@@ -62,6 +69,7 @@ func InitializeAPI() *Application {
 		walletSet,
 		transactionSet,
 		idempotencySet,
+		transferSet,
 		middlewareSet,
 		pkgSet,
 		NewRouter,

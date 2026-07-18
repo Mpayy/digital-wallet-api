@@ -35,6 +35,7 @@ func ResponseError(ctx *gin.Context, code int, err any) {
 func Handle(ctx *gin.Context, err error) {
 	var appErr *apperror.AppError
 	if errors.As(err, &appErr) && appErr.Status < http.StatusInternalServerError {
+		ctx.Set("error_code", appErr.Code)
 		ResponseError(ctx, appErr.Status, appErr)
 		return
 	}

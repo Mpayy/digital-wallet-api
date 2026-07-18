@@ -30,6 +30,11 @@ func LoggerMiddleware(log *logrus.Logger) gin.HandlerFunc {
 			"client_ip":  ctx.ClientIP(),
 		}
 
+		errCode, ok := ctx.Get("error_code")
+		if ok {
+			fields["error_code"] = errCode
+		}
+
 		if len(ctx.Errors) > 0 {
 			fields["error"] = ctx.Errors.Last().Err.Error() // detail akar masalah, kalau ada
 		}
