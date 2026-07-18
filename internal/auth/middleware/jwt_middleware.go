@@ -1,8 +1,7 @@
 package middleware
 
 import (
-	"errors"
-	"net/http"
+	"fmt"
 	"strings"
 
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
@@ -27,32 +26,24 @@ func (m *JwtMiddleware) AuthMiddleware() gin.HandlerFunc {
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 
 		if token == "" || token == "Bearer" {
-			response.ResponseError(ctx, http.StatusUnauthorized, apperror.ErrUnauthorized)
+			response.Handle(ctx, apperror.ErrUnauthorized)
 			return
 		}
 
 		auth, err := m.JwtToken.Validate(token)
 		if err != nil {
-			if errors.Is(err, apperror.ErrExpiredToken) {
-				response.ResponseError(ctx, http.StatusUnauthorized, err.Error())
-				return
-			}
-			if errors.Is(err, apperror.ErrInvalidToken) {
-				response.ResponseError(ctx, http.StatusUnauthorized, err.Error())
-				return
-			}
-			response.ResponseError(ctx, http.StatusInternalServerError, apperror.ErrInternalServer)
+			response.Handle(ctx, err)
 			return
 		}
 
 		result, err := m.RedisCli.Exists(ctx, token).Result()
 		if err != nil {
-			response.ResponseError(ctx, http.StatusInternalServerError, apperror.ErrInternalServer)
+			response.Handle(ctx, fmt.Errorf("check session in redis: %w", err))
 			return
 		}
 
 		if result == 0 {
-			response.ResponseError(ctx, http.StatusUnauthorized, apperror.ErrUnauthorized)
+			response.Handle(ctx, apperror.ErrUnauthorized)
 			return
 		}
 

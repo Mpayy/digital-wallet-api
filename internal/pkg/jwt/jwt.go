@@ -45,7 +45,7 @@ func (t *JwtTokenImpl) Create(auth *Auth) (string, error) {
 
 	jwtToken, err := token.SignedString([]byte(t.SecretKey))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("create token failed: %w", err)
 	}
 
 	return jwtToken, nil

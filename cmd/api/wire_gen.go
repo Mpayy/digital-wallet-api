@@ -14,7 +14,6 @@ import (
 	"github.com/Mpayy/digital-wallet-api/internal/config"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
 	middleware2 "github.com/Mpayy/digital-wallet-api/internal/pkg/middleware"
-	"github.com/Mpayy/digital-wallet-api/internal/pkg/txmanager"
 	repository2 "github.com/Mpayy/digital-wallet-api/internal/wallet/repository"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
 	"github.com/google/wire"
@@ -59,4 +58,4 @@ var middlewareSet = wire.NewSet(middleware.NewJwtMiddleware, middleware2.LoggerM
 
 var infraSet = wire.NewSet(config.NewViper, config.NewValidator, config.NewRedisClient, config.NewLogrus, config.NewGorm, config.NewGin, config.NewApp)
 
-var pkgSet = wire.NewSet(jwt.NewJwtToken, txmanager.NewTxManager)
+var pkgSet = wire.NewSet(jwt.NewJwtToken)

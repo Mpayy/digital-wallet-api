@@ -1,7 +1,6 @@
 package authhandler
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/Mpayy/digital-wallet-api/internal/auth/dto"
@@ -34,27 +33,20 @@ func (h *authHandlerImpl) Register(ctx *gin.Context) {
 
 	err := ctx.ShouldBindJSON(&request)
 	if err != nil {
-		h.Log.WithField("error", err).Warn("Failed to bind register request")
-		response.ResponseError(ctx, http.StatusBadRequest, apperror.ErrBadRequest)
+		response.Handle(ctx, apperror.ErrBadRequest)
 		return
 	}
 
 	err = h.Validator.Struct(request)
 	if err != nil {
-		h.Log.WithFields(logrus.Fields{"error": err}).Warn("Failed to validate register request")
 		validationErrors := apperror.ExtractValidationErrors(err)
-		response.ResponseError(ctx, http.StatusBadRequest, validationErrors)
+		response.Handle(ctx, validationErrors)
 		return
 	}
 
 	result, err := h.AuthUsecase.Register(ctx.Request.Context(), request)
 	if err != nil {
-		switch {
-		case errors.Is(err, apperror.ErrDuplicatedEmail):
-			response.ResponseError(ctx, http.StatusConflict, err)
-		default:
-			response.ResponseError(ctx, http.StatusInternalServerError, err)
-		}
+		response.Handle(ctx, err)
 		return
 	}
 
@@ -66,27 +58,20 @@ func (h *authHandlerImpl) Login(ctx *gin.Context) {
 
 	err := ctx.ShouldBindJSON(&request)
 	if err != nil {
-		h.Log.WithField("error", err).Warn("Failed to bind login request")
-		response.ResponseError(ctx, http.StatusBadRequest, apperror.ErrBadRequest)
+		response.Handle(ctx, apperror.ErrBadRequest)
 		return
 	}
 
 	err = h.Validator.Struct(request)
 	if err != nil {
-		h.Log.WithField("error", err).Warn("Failed to validate login request")
 		validationErrors := apperror.ExtractValidationErrors(err)
-		response.ResponseError(ctx, http.StatusBadRequest, validationErrors)
+		response.Handle(ctx, validationErrors)
 		return
 	}
 
 	result, err := h.AuthUsecase.Login(ctx.Request.Context(), request)
 	if err != nil {
-		switch {
-		case errors.Is(err, apperror.ErrInvalidCredentials):
-			response.ResponseError(ctx, http.StatusUnauthorized, err)
-		default:
-			response.ResponseError(ctx, http.StatusInternalServerError, err)
-		}
+		response.Handle(ctx, err)
 		return
 	}
 
@@ -96,14 +81,13 @@ func (h *authHandlerImpl) Login(ctx *gin.Context) {
 func (h *authHandlerImpl) Logout(ctx *gin.Context) {
 	token := ctx.GetHeader("token")
 	if token == "" {
-		h.Log.WithField("error", apperror.ErrInvalidToken).Warn("Failed to logout user")
-		response.ResponseError(ctx, http.StatusUnauthorized, apperror.ErrInvalidToken)
+		response.Handle(ctx, apperror.ErrInvalidToken)
 		return
 	}
 
 	err := h.AuthUsecase.Logout(ctx.Request.Context(), token)
 	if err != nil {
-		response.ResponseError(ctx, http.StatusInternalServerError, err)
+		response.Handle(ctx, err)
 		return
 	}
 

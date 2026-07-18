@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/dto"
@@ -31,7 +32,8 @@ func NewWalletUsecase(walletRepo repository.WalletRepository, transactionRepo re
 }
 
 func (u *walletUsecaseImpl) CreateWallet(ctx context.Context, userID uint) (*entity.Wallet, error) {
-	u.log.WithField("user_id", userID).Debug("Attempting to create wallet")
+	logger := u.log.WithFields(logrus.Fields{"user_id": userID})
+	logger.Debug("attempting to create wallet")
 
 	wallet := &entity.Wallet{
 		UserID: userID,
@@ -40,19 +42,18 @@ func (u *walletUsecaseImpl) CreateWallet(ctx context.Context, userID uint) (*ent
 	err := u.walletRepo.Create(ctx, wallet)
 	if err != nil {
 		if errors.Is(err, apperror.ErrDuplicatedKey) {
-			u.log.WithFields(logrus.Fields{"user_id": userID, "error": err}).Warn("Failed to create wallet")
 			return nil, apperror.ErrUserHasWalletAlready
 		}
-		u.log.WithFields(logrus.Fields{"user_id": userID, "error": err}).Error("Failed to create wallet")
-		return nil, apperror.ErrInternalServer
+		return nil, fmt.Errorf("create wallet: %w", err)
 	}
 
-	u.log.WithFields(logrus.Fields{"user_id": userID}).Info("Wallet created successfully")
+	logger.Info("wallet created successfully")
 	return wallet, nil
 }
 
 func (u *walletUsecaseImpl) GetWalletByUserID(ctx context.Context, userID uint) (*dto.WalletResponse, error) {
-	u.log.WithField("user_id", userID).Debug("Attempting to get wallet")
+	logger := u.log.WithFields(logrus.Fields{"user_id": userID})
+	logger.Debug("attempting to get wallet")
 
 	wallet, err := u.walletRepo.FindByUserID(ctx, userID)
 	if err != nil {
@@ -66,8 +67,9 @@ func (u *walletUsecaseImpl) GetWalletByUserID(ctx context.Context, userID uint) 
 				if errors.Is(err, apperror.ErrDuplicatedKey) {
 					return nil, apperror.ErrUserHasWalletAlready
 				}
-				return nil, apperror.ErrInternalServer
+				return nil, fmt.Errorf("create wallet: %w", err)
 			}
+			logger.Info("wallet created successfully")
 			return &dto.WalletResponse{
 				ID:        newWallet.ID,
 				UserID:    newWallet.UserID,
@@ -76,9 +78,10 @@ func (u *walletUsecaseImpl) GetWalletByUserID(ctx context.Context, userID uint) 
 				UpdatedAt: newWallet.UpdatedAt,
 			}, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("get wallet by user id %d: %w", userID, err)
 	}
 
+	logger.Info("wallet found successfully")
 	return &dto.WalletResponse{
 		ID:        wallet.ID,
 		UserID:    wallet.UserID,
@@ -89,24 +92,26 @@ func (u *walletUsecaseImpl) GetWalletByUserID(ctx context.Context, userID uint) 
 }
 
 func (u *walletUsecaseImpl) TopUp(ctx context.Context, userID uint, request dto.TopUpRequest, idemKey string) (*dto.TopUpResponse, error) {
-	u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey}).Debug("Attempting to top up wallet")
+	logger := u.log.WithFields(logrus.Fields{
+		"userID":  userID,
+		"idemKey": idemKey,
+		"amount":  request.Amount,
+	})
+	logger.Debug("attempting top up")
 
 	if request.Amount <= 0 {
-		u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey}).Warn("Failed to top up wallet: invalid amount")
 		return nil, apperror.ErrInvalidAmount
 	}
 
 	wallet, err := u.walletRepo.FindByUserID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, apperror.ErrRecordNotFound) {
-			u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey}).Warn("Failed to top up wallet: wallet not found")
 			return nil, apperror.ErrWalletNotFound
 		}
-		u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey, "error": err}).Error("Failed to top up wallet: internal server error")
-		return nil, apperror.ErrInternalServer
+		return nil, fmt.Errorf("find wallet by user id %d: %w", userID, err)
 	}
 
-	claimed, cachedBody, err := u.idemService.Claim(ctx, idemKey, userID, string(entity.TxTypeTopup), request)
+	claimed, cachedBody, err := u.idemService.Claim(ctx, idemKey, userID, "TOPUP", request)
 	if err != nil {
 		return nil, err
 	}
@@ -114,11 +119,9 @@ func (u *walletUsecaseImpl) TopUp(ctx context.Context, userID uint, request dto.
 	if !claimed {
 		var cached dto.TopUpResponse
 		if err := json.Unmarshal([]byte(cachedBody), &cached); err != nil {
-			u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey, "error": err}).Error("Failed to unmarshal cached response")
-			return nil, apperror.ErrInternalServer
+			return nil, fmt.Errorf("unmarshal cached top up response: %w", err)
 		}
-
-		u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey}).Info("Top up wallet: duplicate request detected, returning cached response")
+		logger.Info("top up wallet: duplicate request detected, returning cached response")
 		return &cached, nil
 	}
 
@@ -127,11 +130,9 @@ func (u *walletUsecaseImpl) TopUp(ctx context.Context, userID uint, request dto.
 		lockWallet, err := u.walletRepo.LockByID(tx, wallet.ID)
 		if err != nil {
 			if errors.Is(err, apperror.ErrRecordNotFound) {
-				u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey}).Warn("Failed to top up wallet: wallet not found")
 				return apperror.ErrWalletNotFound
 			}
-			u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey, "error": err}).Error("Failed to top up wallet: internal server error")
-			return apperror.ErrInternalServer
+			return fmt.Errorf("lock wallet: %w", err)
 		}
 
 		balanceBefore := lockWallet.Balance
@@ -140,8 +141,7 @@ func (u *walletUsecaseImpl) TopUp(ctx context.Context, userID uint, request dto.
 
 		err = u.walletRepo.Save(tx, lockWallet)
 		if err != nil {
-			u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey, "error": err}).Error("Failed to top up wallet: internal server error")
-			return apperror.ErrInternalServer
+			return fmt.Errorf("save wallet: %w", err)
 		}
 
 		transaction := &entity.Transaction{
@@ -155,8 +155,7 @@ func (u *walletUsecaseImpl) TopUp(ctx context.Context, userID uint, request dto.
 
 		err = u.transactionRepo.Create(tx, transaction)
 		if err != nil {
-			u.log.WithFields(logrus.Fields{"user_id": userID, "idemKey": idemKey, "error": err}).Error("Failed to top up wallet: internal server error")
-			return apperror.ErrInternalServer
+			return fmt.Errorf("create transaction: %w", err)
 		}
 
 		result = &dto.TopUpResponse{
@@ -176,15 +175,16 @@ func (u *walletUsecaseImpl) TopUp(ctx context.Context, userID uint, request dto.
 	if txErr != nil {
 		err := u.idemService.MarkFailed(ctx, idemKey)
 		if err != nil {
-			return nil, err
+			logger.WithError(err).Error("failed to mark idempotency key as failed")
 		}
 		return nil, txErr
 	}
 
 	err = u.idemService.Complete(ctx, idemKey, result)
 	if err != nil {
-		return nil, err
+		logger.WithError(err).Error("failed to mark idempotency key as complete")
 	}
 
+	logger.Info("top up wallet: completed successfully")
 	return result, nil
 }
