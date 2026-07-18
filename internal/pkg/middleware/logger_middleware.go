@@ -22,13 +22,19 @@ func LoggerMiddleware(log *logrus.Logger) gin.HandlerFunc {
 			path = path + "?" + raw
 		}
 
-		entry := log.WithFields(logrus.Fields{
+		fields := logrus.Fields{
 			"method":     ctx.Request.Method,
 			"path":       path,
 			"status":     status,
 			"latency_ms": latency.Milliseconds(),
 			"client_ip":  ctx.ClientIP(),
-		})
+		}
+
+		if len(ctx.Errors) > 0 {
+			fields["error"] = ctx.Errors.Last().Err.Error() // detail akar masalah, kalau ada
+		}
+
+		entry := log.WithFields(fields)
 
 		switch {
 		case status >= 500:

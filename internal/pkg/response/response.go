@@ -1,6 +1,12 @@
 package response
 
-import "github.com/gin-gonic/gin"
+import (
+	"errors"
+	"net/http"
+
+	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
+	"github.com/gin-gonic/gin"
+)
 
 type SuccessResponse struct {
 	Success bool `json:"success" example:"true"`
@@ -24,4 +30,14 @@ func ResponseError(ctx *gin.Context, code int, err any) {
 		Success: false,
 		Error:   err,
 	})
+}
+
+func Handle(ctx *gin.Context, err error) {
+	var appErr *apperror.AppError
+	if errors.As(err, &appErr) && appErr.Status < http.StatusInternalServerError {
+		ResponseError(ctx, appErr.Status, appErr)
+		return
+	}
+	_ = ctx.Error(err)
+	ResponseError(ctx, http.StatusInternalServerError, apperror.ErrInternalServer)
 }

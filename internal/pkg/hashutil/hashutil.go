@@ -4,12 +4,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 )
 
 func HashPayload(payload any) (string, error) {
 	bytes, err := json.Marshal(payload)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("hash payload failed: %w", err)
 	}
 
 	hashBytes := sha256.Sum256(bytes)

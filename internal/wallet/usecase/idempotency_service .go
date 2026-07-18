@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/hashutil"
@@ -28,17 +29,13 @@ func NewIdempotencyService(log *logrus.Logger, idempotencyRepo repository.Idempo
 }
 
 func (s *idempotencyServiceImpl) Claim(ctx context.Context, key string, userID uint, endpoint string, payload any) (claimed bool, cachedBody string, err error) {
-	s.log.WithFields(logrus.Fields{"key": key, "user_id": userID, "endpoint": endpoint, "payload": payload}).Debug("idem:Claiming request")
-
 	if key == "" {
-		s.log.WithFields(logrus.Fields{"key": key, "user_id": userID, "endpoint": endpoint, "payload": payload}).Warn("idem:Missing idempotency key")
 		return false, "", apperror.ErrMissingIdempotencyKey
 	}
 
 	reqHash, err := hashutil.HashPayload(payload)
 	if err != nil {
-		s.log.WithFields(logrus.Fields{"key": key, "error": err}).Error("idem:HashPayload failed")
-		return false, "", apperror.ErrInternalServer
+		return false, "", err
 	}
 
 	record := &entity.IdempotencyKey{
@@ -51,39 +48,32 @@ func (s *idempotencyServiceImpl) Claim(ctx context.Context, key string, userID u
 
 	err = s.idempotencyRepo.Insert(ctx, record)
 	if err == nil {
-		s.log.WithFields(logrus.Fields{"key": key, "user_id": userID, "endpoint": endpoint, "payload": payload}).Info("idem:Request claimed")
 		return true, "", nil
 	}
 
 	if !errors.Is(err, apperror.ErrDuplicatedKey) {
-		s.log.WithFields(logrus.Fields{"key": key, "error": err}).Warn("idem:Insert failed (not duplicated)")
-		return false, "", apperror.ErrInternalServer
+		return false, "", fmt.Errorf("insert idempotency key: %w", err)
 	}
 
 	existing, findErr := s.idempotencyRepo.FindByKey(ctx, key)
 	if findErr != nil {
-		if errors.Is(findErr, apperror.ErrRecordNotFound) {
-			s.log.WithFields(logrus.Fields{"key": key, "error": findErr}).Warn("idem:FindByKey failed")
-			return false, "", apperror.ErrMissingIdempotencyKey
-		}
-		s.log.WithFields(logrus.Fields{"key": key, "error": findErr}).Error("idem:FindByKey failed")
-		return false, "", apperror.ErrInternalServer
+		return false, "", fmt.Errorf("find idempotency key: %w", findErr)
 	}
 
 	if existing.RequestHash != reqHash {
-		s.log.WithFields(logrus.Fields{"key": key, "user_id": userID, "existing_hash": existing.RequestHash, "incoming_hash": reqHash}).Warn("idem:request hash not match")
+		s.log.WithFields(logrus.Fields{
+			"key": key, "user_id": userID, "endpoint": endpoint,
+			"existing_hash": existing.RequestHash, "new_hash": reqHash,
+		}).Warn("idempotency key reused with different payload")
 		return false, "", apperror.ErrIdempotencyKeyConflict
 	}
 
 	switch existing.Status {
 	case entity.IdemStatusCompleted:
-		s.log.WithFields(logrus.Fields{"key": key, "user_id": userID, "endpoint": endpoint}).Info("idem: Duplicate request detected, returning cached response")
 		return false, existing.ResponseBody, nil
 	case entity.IdemStatusProcessing:
-		s.log.WithFields(logrus.Fields{"key": key, "user_id": userID, "endpoint": endpoint}).Warn("idem:Request already in progress")
 		return false, "", apperror.ErrRequestInProgress
 	default:
-		s.log.WithFields(logrus.Fields{"key": key, "user_id": userID, "endpoint": endpoint}).Warn("idem:Previous attempt failed")
 		return false, "", apperror.ErrPreviousAttemptFailed
 	}
 }
@@ -91,13 +81,11 @@ func (s *idempotencyServiceImpl) Claim(ctx context.Context, key string, userID u
 func (s *idempotencyServiceImpl) Complete(ctx context.Context, key string, response any) error {
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
-		s.log.WithFields(logrus.Fields{"key": key, "error": err}).Error("idem:Marshal failed")
-		return apperror.ErrInternalServer
+		return fmt.Errorf("marshal idempotency response: %w", err)
 	}
 	err = s.idempotencyRepo.UpdateStatus(ctx, key, entity.IdemStatusCompleted, 201, string(responseJSON))
 	if err != nil {
-		s.log.WithFields(logrus.Fields{"key": key, "error": err}).Error("idem:UpdateStatus failed")
-		return apperror.ErrInternalServer
+		return fmt.Errorf("update idempotency status: %w", err)
 	}
 	return nil
 }
@@ -105,8 +93,7 @@ func (s *idempotencyServiceImpl) Complete(ctx context.Context, key string, respo
 func (s *idempotencyServiceImpl) MarkFailed(ctx context.Context, key string) error {
 	err := s.idempotencyRepo.UpdateStatus(ctx, key, entity.IdemStatusFailed, 0, "")
 	if err != nil {
-		s.log.WithFields(logrus.Fields{"key": key, "error": err}).Error("idem:UpdateStatus failed")
-		return apperror.ErrInternalServer
+		return fmt.Errorf("update idempotency status: %w", err)
 	}
 	return nil
 }
