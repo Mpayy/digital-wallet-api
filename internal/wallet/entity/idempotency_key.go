@@ -12,10 +12,10 @@ const (
 
 type IdempotencyKey struct {
 	ID             uint              `gorm:"column:id;primaryKey"`
-	Key            string            `gorm:"column:idem_key;uniqueIndex:uq_idempotency_key;not null;size:100"`
+	Key            string            `gorm:"column:idem_key;uniqueIndex:uq_idempotency_key;not null;size:100"`// "key" reserved word MySQL — kolom fisik idem_key
 	UserID         uint              `gorm:"column:user_id;not null;index"`
-	Endpoint       string            `gorm:"column:endpoint;not null;size:50"`
-	RequestHash    string            `gorm:"column:request_hash;not null;size:64"`
+	Endpoint       string            `gorm:"column:endpoint;not null;size:50"`// "TOPUP" | "TRANSFER"
+	RequestHash    string            `gorm:"column:request_hash;not null;size:64"`// sha256 hex dari request body ternormalisasi
 	Status         IdempotencyStatus `gorm:"column:status;type:varchar(20);not null;default:'PROCESSING'"`
 	ResponseStatus int               `gorm:"column:response_status"`
 	ResponseBody   string            `gorm:"column:response_body;type:text"`

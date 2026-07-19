@@ -54,6 +54,8 @@ func (u *transferUsecaseImpl) Transfer(ctx context.Context, fromUserID uint, req
 		return nil, apperror.ErrInvalidAmount
 	}
 
+	// Resolve TANPA lock — cuma untuk dapat wallet ID + validasi eksistensi.
+	// Balance di sini TIDAK dipakai untuk keputusan bisnis (lihat balance check di bawah).
 	fromWallet, err := u.walletRepo.FindByUserID(ctx, fromUserID)
 	if err != nil {
 		if errors.Is(err, apperror.ErrRecordNotFound) {
@@ -92,6 +94,7 @@ func (u *transferUsecaseImpl) Transfer(ctx context.Context, fromUserID uint, req
 
 	var result *dto.TransferResponse
 	txErr := u.walletRepo.WithTx(ctx, func(tx *gorm.DB) error {
+		// Deadlock prevention: SELALU lock wallet ID lebih kecil dulu, terlepas dari arah transfer
 		firstID, secondID := fromWallet.ID, toWallet.ID
 		if firstID > secondID {
 			firstID, secondID = secondID, firstID
@@ -115,6 +118,7 @@ func (u *transferUsecaseImpl) Transfer(ctx context.Context, fromUserID uint, req
 			return fmt.Errorf("lock recipient wallet: %w", errLock2)
 		}
 
+		// Petakan kembali locked object -> peran bisnis (sender/recipient)
 		var sender, recipient *entity.Wallet
 		if firstLocked.ID == fromWallet.ID {
 			sender, recipient = firstLocked, secondLocked
