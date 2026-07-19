@@ -16,8 +16,15 @@ import (
 
 type WalletUsecase interface {
 	CreateWallet(ctx context.Context, userID uint) (*entity.Wallet, error)
+	// logic: walletRepo.Create dgn balance=0 — dipanggil AuthUsecase.Register via interface
+
 	GetWalletByUserID(ctx context.Context, userID uint) (*dto.WalletResponse, error)
-	TopUp(ctx context.Context, userID uint, request dto.TopUpRequest, idemKey string) (*dto.TopUpResponse, error)
+	// logic: FindByUserID -> kalau not found, lazy-create sbg fallback defensif -> mapping DTO
+
+	TopUp(ctx context.Context, userID uint, req dto.TopUpRequest, idemKey string) (*dto.TopUpResponse, error)
+	// logic: idempotency.Claim -> !claimed? return cached
+	//   -> WithTx: LockByID -> balance += amount -> Save -> transactionRepo.Create(TOPUP, before/after)
+	//   -> commit -> idempotency.Complete -> return response
 }
 
 type walletUsecaseImpl struct {

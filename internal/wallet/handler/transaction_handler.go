@@ -14,8 +14,8 @@ import (
 )
 
 type TransactionHandler interface {
-	ListTransactions(ctx *gin.Context)
-	GetTransactionDetail(ctx *gin.Context)
+	ListTransactions(c *gin.Context)     // query params -> usecase.GetTransactionHistory -> 200
+	GetTransactionDetail(c *gin.Context) // path param :id -> usecase.GetTransactionDetail -> 200
 }
 
 type transactionHandlerImpl struct {
