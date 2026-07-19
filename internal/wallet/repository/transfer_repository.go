@@ -7,6 +7,7 @@ import (
 
 type TransferRepository interface {
 	Create(tx *gorm.DB, transfer *entity.Transfer) error
+	// insert 1 baris Transfer (parent record), sebelum insert 2 leg Transaction TRANSFER_IN/OUT
 }
 
 type transferRepositoryImpl struct {

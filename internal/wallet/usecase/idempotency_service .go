@@ -15,8 +15,14 @@ import (
 
 type IdempotencyService interface {
 	Claim(ctx context.Context, key string, userID uint, endpoint string, payload any) (claimed bool, cachedBody string, err error)
+	// logic: coba Insert (status PROCESSING) -> ErrDuplicatedKey? FindByKey
+	//   -> beda request_hash? conflict -> status COMPLETED? return cached -> PROCESSING? request-in-progress
+
 	Complete(ctx context.Context, key string, response any) error
+	// logic: json.Marshal(response) -> UpdateStatus(COMPLETED, 201, responseJSON)
+
 	MarkFailed(ctx context.Context, key string) error
+	// logic: UpdateStatus(FAILED, 0, "")
 }
 
 type idempotencyServiceImpl struct {
@@ -88,7 +94,7 @@ func (s *idempotencyServiceImpl) Claim(ctx context.Context, key string, userID u
 
 func (s *idempotencyServiceImpl) Complete(ctx context.Context, key string, response any) error {
 	logger := s.log.WithFields(logrus.Fields{
-		"key":      key,
+		"key": key,
 	})
 	logger.Debug("attempting to complete idempotency key")
 
@@ -100,22 +106,22 @@ func (s *idempotencyServiceImpl) Complete(ctx context.Context, key string, respo
 	if err != nil {
 		return fmt.Errorf("update idempotency status: %w", err)
 	}
-	
+
 	logger.Debug("idempotency key completed successfully")
 	return nil
 }
 
 func (s *idempotencyServiceImpl) MarkFailed(ctx context.Context, key string) error {
 	logger := s.log.WithFields(logrus.Fields{
-		"key":      key,
+		"key": key,
 	})
 	logger.Debug("attempting to mark idempotency key as failed")
-	
+
 	err := s.idempotencyRepo.UpdateStatus(ctx, key, entity.IdemStatusFailed, 0, "")
 	if err != nil {
 		return fmt.Errorf("update idempotency status: %w", err)
 	}
-	
+
 	logger.Debug("idempotency key marked as failed successfully")
 	return nil
 }

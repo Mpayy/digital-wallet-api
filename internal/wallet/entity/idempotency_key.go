@@ -11,7 +11,7 @@ const (
 )
 
 type IdempotencyKey struct {
-	ID             uint              `gorm:"column:id;primaryKey;autoIncrement"`
+	ID             uint              `gorm:"column:id;primaryKey"`
 	Key            string            `gorm:"column:idem_key;uniqueIndex:uq_idempotency_key;not null;size:100"`
 	UserID         uint              `gorm:"column:user_id;not null;index"`
 	Endpoint       string            `gorm:"column:endpoint;not null;size:50"`

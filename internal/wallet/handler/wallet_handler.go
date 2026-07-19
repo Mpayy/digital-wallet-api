@@ -13,9 +13,9 @@ import (
 )
 
 type WalletHandler interface {
-	GetMyWallet(ctx *gin.Context)
-	TopUp(ctx *gin.Context)
-	Transfer(ctx *gin.Context)
+	GetMyWallet(c *gin.Context) // user_id dari JWT context -> usecase.GetWalletByUserID -> 200
+	TopUp(c *gin.Context)       // bind JSON + header Idempotency-Key -> usecase.TopUp -> 201
+	Transfer(c *gin.Context)    // bind JSON + header Idempotency-Key -> transferUC.Transfer -> 201
 }
 
 type walletHandlerImpl struct {

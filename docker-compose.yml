@@ -1,0 +1,74 @@
+services:
+  app:
+    build: .
+
+    container_name: digital-wallet-api-app
+    restart: unless-stopped
+    
+    ports:
+      - "8080:8080"
+
+    depends_on:
+      - mysql
+      - redis
+
+    volumes:
+      - ./.env:/app/.env
+
+    environment:
+      - DATABASE_HOST=mysql 
+      - REDIS_HOST=redis
+      - DATABASE_PASSWORD=root
+
+    networks:
+      - digital-wallet-api-network
+
+  mysql:
+    image: mysql:8.0
+
+    container_name: digital-wallet-api-mysql
+    restart: unless-stopped
+
+    environment:
+      MYSQL_ROOT_PASSWORD: root        
+      MYSQL_DATABASE: digital_wallet_api        
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4   
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+
+    ports:
+      - "3306:3306"
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+    networks:
+      - digital-wallet-api-network
+  
+  redis:
+    image: redis:7-alpine
+
+    container_name: digital-wallet-api-redis
+
+    restart: unless-stopped
+
+    ports:
+      - "6379:6379"
+
+    command: redis-server --appendonly yes
+
+    volumes:
+      - redis_data:/data
+
+    networks:
+      - digital-wallet-api-network
+
+volumes:
+  mysql_data:
+  redis_data:  
+
+networks:
+  digital-wallet-api-network:
+    driver: bridge
+    
+ 
+    
