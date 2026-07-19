@@ -9,34 +9,37 @@ import (
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/dto"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 )
 
 type WalletHandler interface {
-	GetMyWallet(ctx *gin.Context) // user_id dari JWT context -> usecase.GetWalletByUserID -> 200
-	TopUp(ctx *gin.Context)       // bind JSON + header Idempotency-Key -> usecase.TopUp -> 201
-	Transfer(ctx *gin.Context)    // bind JSON + header Idempotency-Key -> transferUC.Transfer -> 201
+	GetMyWallet(ctx *gin.Context)
+	TopUp(ctx *gin.Context)
+	Transfer(ctx *gin.Context)
 }
 
 type walletHandlerImpl struct {
 	walletUsecase   usecase.WalletUsecase
 	transferUsecase usecase.TransferUsecase
+	validator       *validator.Validate
 }
 
-func NewWalletHandler(walletUsecase usecase.WalletUsecase, transferUsecase usecase.TransferUsecase) WalletHandler {
+func NewWalletHandler(walletUsecase usecase.WalletUsecase, transferUsecase usecase.TransferUsecase, validator *validator.Validate) WalletHandler {
 	return &walletHandlerImpl{
 		walletUsecase:   walletUsecase,
 		transferUsecase: transferUsecase,
+		validator:       validator,
 	}
 }
 
 func (h *walletHandlerImpl) GetMyWallet(ctx *gin.Context) {
 	auth := middleware.GetAuthUser(ctx)
 	if auth == nil {
-		response.ResponseError(ctx, http.StatusUnauthorized, apperror.ErrUnauthorized)
+		response.Handle(ctx, apperror.ErrUnauthorized)
 		return
 	}
 
-	wallet, err := h.walletUsecase.GetWalletByUserID(ctx, auth.ID)
+	wallet, err := h.walletUsecase.GetWalletByUserID(ctx.Request.Context(), auth.ID)
 	if err != nil {
 		response.Handle(ctx, err)
 		return
@@ -53,8 +56,16 @@ func (h *walletHandlerImpl) TopUp(ctx *gin.Context) {
 	}
 
 	var request dto.TopUpRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
+	err := ctx.ShouldBindJSON(&request)
+	if err != nil {
 		response.Handle(ctx, apperror.ErrBadRequest)
+		return
+	}
+
+	err = h.validator.Struct(request)
+	if err != nil {
+		validationErrors := apperror.ExtractValidationErrors(err)
+		response.Handle(ctx, validationErrors)
 		return
 	}
 
@@ -64,7 +75,7 @@ func (h *walletHandlerImpl) TopUp(ctx *gin.Context) {
 		return
 	}
 
-	wallet, err := h.walletUsecase.TopUp(ctx, auth.ID, request, idemKey)
+	wallet, err := h.walletUsecase.TopUp(ctx.Request.Context(), auth.ID, request, idemKey)
 	if err != nil {
 		response.Handle(ctx, err)
 		return
@@ -81,8 +92,16 @@ func (h *walletHandlerImpl) Transfer(ctx *gin.Context) {
 	}
 
 	var request dto.TransferRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
+	err := ctx.ShouldBindJSON(&request)
+	if err != nil {
 		response.Handle(ctx, apperror.ErrBadRequest)
+		return
+	}
+
+	err = h.validator.Struct(request)
+	if err != nil {
+		validationErrors := apperror.ExtractValidationErrors(err)
+		response.Handle(ctx, validationErrors)
 		return
 	}
 
@@ -92,7 +111,7 @@ func (h *walletHandlerImpl) Transfer(ctx *gin.Context) {
 		return
 	}
 
-	result, err := h.transferUsecase.Transfer(ctx, auth.ID, request, idemKey)
+	result, err := h.transferUsecase.Transfer(ctx.Request.Context(), auth.ID, request, idemKey)
 	if err != nil {
 		response.Handle(ctx, err)
 		return

@@ -29,6 +29,13 @@ func NewIdempotencyService(log *logrus.Logger, idempotencyRepo repository.Idempo
 }
 
 func (s *idempotencyServiceImpl) Claim(ctx context.Context, key string, userID uint, endpoint string, payload any) (claimed bool, cachedBody string, err error) {
+	logger := s.log.WithFields(logrus.Fields{
+		"key":      key,
+		"user_id":  userID,
+		"endpoint": endpoint,
+	})
+	logger.Debug("attempting to claim idempotency key")
+
 	if key == "" {
 		return false, "", apperror.ErrMissingIdempotencyKey
 	}
@@ -48,6 +55,7 @@ func (s *idempotencyServiceImpl) Claim(ctx context.Context, key string, userID u
 
 	err = s.idempotencyRepo.Insert(ctx, record)
 	if err == nil {
+		logger.Debug("idempotency key claimed successfully")
 		return true, "", nil
 	}
 
@@ -61,8 +69,7 @@ func (s *idempotencyServiceImpl) Claim(ctx context.Context, key string, userID u
 	}
 
 	if existing.RequestHash != reqHash {
-		s.log.WithFields(logrus.Fields{
-			"key": key, "user_id": userID, "endpoint": endpoint,
+		logger.WithFields(logrus.Fields{
 			"existing_hash": existing.RequestHash, "new_hash": reqHash,
 		}).Warn("idempotency key reused with different payload")
 		return false, "", apperror.ErrIdempotencyKeyConflict
@@ -70,6 +77,7 @@ func (s *idempotencyServiceImpl) Claim(ctx context.Context, key string, userID u
 
 	switch existing.Status {
 	case entity.IdemStatusCompleted:
+		logger.Info("idempotency key already completed")
 		return false, existing.ResponseBody, nil
 	case entity.IdemStatusProcessing:
 		return false, "", apperror.ErrRequestInProgress
@@ -79,6 +87,11 @@ func (s *idempotencyServiceImpl) Claim(ctx context.Context, key string, userID u
 }
 
 func (s *idempotencyServiceImpl) Complete(ctx context.Context, key string, response any) error {
+	logger := s.log.WithFields(logrus.Fields{
+		"key":      key,
+	})
+	logger.Debug("attempting to complete idempotency key")
+
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
 		return fmt.Errorf("marshal idempotency response: %w", err)
@@ -87,13 +100,22 @@ func (s *idempotencyServiceImpl) Complete(ctx context.Context, key string, respo
 	if err != nil {
 		return fmt.Errorf("update idempotency status: %w", err)
 	}
+	
+	logger.Debug("idempotency key completed successfully")
 	return nil
 }
 
 func (s *idempotencyServiceImpl) MarkFailed(ctx context.Context, key string) error {
+	logger := s.log.WithFields(logrus.Fields{
+		"key":      key,
+	})
+	logger.Debug("attempting to mark idempotency key as failed")
+	
 	err := s.idempotencyRepo.UpdateStatus(ctx, key, entity.IdemStatusFailed, 0, "")
 	if err != nil {
 		return fmt.Errorf("update idempotency status: %w", err)
 	}
+	
+	logger.Debug("idempotency key marked as failed successfully")
 	return nil
 }

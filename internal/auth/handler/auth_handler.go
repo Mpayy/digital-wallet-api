@@ -79,7 +79,7 @@ func (h *authHandlerImpl) Login(ctx *gin.Context) {
 }
 
 func (h *authHandlerImpl) Logout(ctx *gin.Context) {
-	token := ctx.GetHeader("token")
+	token := ctx.GetString("token")
 	if token == "" {
 		response.Handle(ctx, apperror.ErrInvalidToken)
 		return

@@ -14,15 +14,17 @@ type Router struct {
 	Log           *logrus.Logger
 	AuthHandler   authHandler.AuthHandler
 	WalletHandler walletHandler.WalletHandler
+	TransactionHandler walletHandler.TransactionHandler
 	JwtMiddleware *jwtMiddleware.JwtMiddleware
 }
 
-func NewRouter(app *gin.Engine, log *logrus.Logger, authHandler authHandler.AuthHandler, walletHandler walletHandler.WalletHandler, jwtMiddleware *jwtMiddleware.JwtMiddleware) *Router {
+func NewRouter(app *gin.Engine, log *logrus.Logger, authHandler authHandler.AuthHandler, walletHandler walletHandler.WalletHandler, transactionHandler walletHandler.TransactionHandler, jwtMiddleware *jwtMiddleware.JwtMiddleware) *Router {
 	return &Router{
 		App:           app,
 		Log:           log,
 		AuthHandler:   authHandler,
 		WalletHandler: walletHandler,
+		TransactionHandler: transactionHandler,
 		JwtMiddleware: jwtMiddleware,
 	}
 }
@@ -40,6 +42,9 @@ func (r *Router) Setup() {
 		wallets.GET("/me", r.WalletHandler.GetMyWallet)
 		wallets.POST("/top-up", r.WalletHandler.TopUp)
 		wallets.POST("/transfer", r.WalletHandler.Transfer)
-	}
 
+		transactions := v1.Group("/transactions", r.JwtMiddleware.AuthMiddleware())
+        transactions.GET("", r.TransactionHandler.ListTransactions)
+        transactions.GET("/:id", r.TransactionHandler.GetTransactionDetail)
+	}
 }

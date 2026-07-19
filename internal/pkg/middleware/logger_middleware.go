@@ -36,7 +36,7 @@ func LoggerMiddleware(log *logrus.Logger) gin.HandlerFunc {
 		}
 
 		if len(ctx.Errors) > 0 {
-			fields["error"] = ctx.Errors.Last().Err.Error() // detail akar masalah, kalau ada
+			fields["error"] = ctx.Errors.Last().Err.Error()
 		}
 
 		entry := log.WithFields(fields)
