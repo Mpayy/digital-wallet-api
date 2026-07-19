@@ -86,7 +86,7 @@ func (u *authUsecaseImpl) Login(ctx context.Context, request dto.LoginRequest) (
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(request.Password))
 	if err != nil {
-		return nil, fmt.Errorf("compare password for email %s: %w", request.Email, err)
+		return nil, apperror.ErrInvalidCredentials
 	}
 
 	auth := &jwt.Auth{

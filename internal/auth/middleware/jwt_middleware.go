@@ -9,20 +9,26 @@ import (
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/response"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"github.com/sirupsen/logrus"
 )
 
 type JwtMiddleware struct {
 	JwtToken jwt.JwtToken
 	RedisCli *redis.Client
+	Log      *logrus.Logger
 }
 
-func NewJwtMiddleware(token jwt.JwtToken, client *redis.Client) *JwtMiddleware {
-	return &JwtMiddleware{JwtToken: token, RedisCli: client}
+func NewJwtMiddleware(token jwt.JwtToken, client *redis.Client, log *logrus.Logger) *JwtMiddleware {
+	return &JwtMiddleware{JwtToken: token, RedisCli: client, Log: log}
 }
 
 func (m *JwtMiddleware) AuthMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		authHeader := ctx.GetHeader("Authorization")
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			response.Handle(ctx, apperror.ErrUnauthorized)
+			return
+		}
 		token := strings.TrimPrefix(authHeader, "Bearer ")
 
 		if token == "" || token == "Bearer" {
@@ -32,6 +38,7 @@ func (m *JwtMiddleware) AuthMiddleware() gin.HandlerFunc {
 
 		auth, err := m.JwtToken.Validate(token)
 		if err != nil {
+			m.Log.WithError(err).Debug("jwt validation failed")
 			response.Handle(ctx, err)
 			return
 		}

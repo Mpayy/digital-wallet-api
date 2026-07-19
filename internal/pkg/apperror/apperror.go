@@ -28,7 +28,7 @@ var (
 	// Auth
 	ErrDuplicatedEmail    = &AppError{Code: "EMAIL_ALREADY_EXISTS", Message: "email already exists", Status: http.StatusConflict}
 	ErrUserNotFound       = &AppError{Code: "USER_NOT_FOUND", Message: "user not found", Status: http.StatusNotFound}
-	ErrInvalidCredentials = &AppError{Code: "INVALID_CREDENTIALS", Message: "invalid credentials", Status: http.StatusUnauthorized}
+	ErrInvalidCredentials = &AppError{Code: "INVALID_CREDENTIALS", Message: "wrong email or password", Status: http.StatusUnauthorized}
 	ErrInvalidToken       = &AppError{Code: "INVALID_TOKEN", Message: "invalid token", Status: http.StatusUnauthorized}
 	ErrExpiredToken       = &AppError{Code: "TOKEN_HAS_EXPIRED", Message: "token has expired", Status: http.StatusUnauthorized}
 	ErrUnauthorized       = &AppError{Code: "UNAUTHORIZED", Message: "unauthorized", Status: http.StatusUnauthorized}

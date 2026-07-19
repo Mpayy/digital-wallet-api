@@ -41,9 +41,11 @@ func InitializeAPI() *Application {
 	authHandler := authhandler.NewAuthHandler(authUsecase, validate, logger)
 	transferRepository := repository2.NewTransferRepository(db)
 	transferUsecase := usecase.NewTransferUsecase(transferRepository, walletRepository, idempotencyService, transactionRepository, logger)
-	walletHandler := handler.NewWalletHandler(walletUsecase, transferUsecase)
-	jwtMiddleware := middleware.NewJwtMiddleware(jwtToken, client)
-	router := NewRouter(engine, logger, authHandler, walletHandler, jwtMiddleware)
+	walletHandler := handler.NewWalletHandler(walletUsecase, transferUsecase, validate)
+	transactionUsecase := usecase.NewTransactionUsecase(transactionRepository, walletUsecase, logger)
+	transactionHandler := handler.NewTransactionHandler(transactionUsecase, validate)
+	jwtMiddleware := middleware.NewJwtMiddleware(jwtToken, client, logger)
+	router := NewRouter(engine, logger, authHandler, walletHandler, transactionHandler, jwtMiddleware)
 	application := NewApplication(app, router)
 	return application
 }
@@ -54,7 +56,7 @@ var authSet = wire.NewSet(repository.NewAuthRepository, usecase2.NewAuthUsecase,
 
 var walletSet = wire.NewSet(repository2.NewWalletRepository, usecase.NewWalletUsecase, handler.NewWalletHandler)
 
-var transactionSet = wire.NewSet(repository2.NewTransactionRepository)
+var transactionSet = wire.NewSet(repository2.NewTransactionRepository, usecase.NewTransactionUsecase, handler.NewTransactionHandler)
 
 var idempotencySet = wire.NewSet(repository2.NewIdempotencyRepository, usecase.NewIdempotencyService)
 

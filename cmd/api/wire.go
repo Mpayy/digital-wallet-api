@@ -31,6 +31,8 @@ var walletSet = wire.NewSet(
 
 var transactionSet = wire.NewSet(
 	walletRepo.NewTransactionRepository,
+	walletUsecase.NewTransactionUsecase,
+	walletHandler.NewTransactionHandler,
 )
 
 var idempotencySet = wire.NewSet(

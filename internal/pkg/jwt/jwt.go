@@ -38,10 +38,14 @@ func NewJwtToken(config *viper.Viper) JwtToken {
 }
 
 func (t *JwtTokenImpl) Create(auth *Auth) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id":  auth.ID,
-		"exp": time.Now().Add(TokenDuration).Unix(),
-	})
+	claims := CustomClaim{
+		ID: auth.ID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TokenDuration)),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	jwtToken, err := token.SignedString([]byte(t.SecretKey))
 	if err != nil {
@@ -54,11 +58,11 @@ func (t *JwtTokenImpl) Create(auth *Auth) (string, error) {
 func (t *JwtTokenImpl) Validate(jwtToken string) (*Auth, error) {
 	var claims CustomClaim
 	token, err := jwt.ParseWithClaims(jwtToken, &claims, func(token *jwt.Token) (any, error) {
-        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-            return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-        }
-        return []byte(t.SecretKey), nil
-    })
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(t.SecretKey), nil
+	})
 
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
@@ -71,8 +75,8 @@ func (t *JwtTokenImpl) Validate(jwtToken string) (*Auth, error) {
 	}
 
 	if !token.Valid {
-        return nil, apperror.ErrInvalidToken
-    }
+		return nil, apperror.ErrInvalidToken
+	}
 
 	return &Auth{
 		ID: claims.ID,
