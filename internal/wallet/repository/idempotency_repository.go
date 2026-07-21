@@ -9,15 +9,13 @@ import (
 	"gorm.io/gorm"
 )
 
+//go:generate mockery
+//mockery:generate: true
+//mockery:filename: ../mocks/mock_idempotency_repository.go
 type IdempotencyRepository interface {
 	Insert(ctx context.Context, record *entity.IdempotencyKey) error
-	// INSERT klaim key baru — andalkan UNIQUE constraint kolom `key` utk deteksi race
-
 	FindByKey(ctx context.Context, key string) (*entity.IdempotencyKey, error)
-	// ambil record existing utk cek request_hash & status
-
 	UpdateStatus(ctx context.Context, key string, status entity.IdempotencyStatus, responseStatus int, responseBody string) error
-	// update jadi COMPLETED (simpan cached response) atau FAILED
 }
 
 type idempotencyRepositoryImpl struct {

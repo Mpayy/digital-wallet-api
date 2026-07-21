@@ -13,16 +13,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+//go:generate mockery
+//mockery:generate: true
+//mockery:filename: ../mocks/mock_idempotency_service.go
 type IdempotencyService interface {
 	Claim(ctx context.Context, key string, userID uint, endpoint string, payload any) (claimed bool, cachedBody string, err error)
-	// logic: coba Insert (status PROCESSING) -> ErrDuplicatedKey? FindByKey
-	//   -> beda request_hash? conflict -> status COMPLETED? return cached -> PROCESSING? request-in-progress
-
 	Complete(ctx context.Context, key string, response any) error
-	// logic: json.Marshal(response) -> UpdateStatus(COMPLETED, 201, responseJSON)
-
 	MarkFailed(ctx context.Context, key string) error
-	// logic: UpdateStatus(FAILED, 0, "")
 }
 
 type idempotencyServiceImpl struct {
@@ -59,14 +56,14 @@ func (s *idempotencyServiceImpl) Claim(ctx context.Context, key string, userID u
 		Status:      entity.IdemStatusProcessing,
 	}
 
-	err = s.idempotencyRepo.Insert(ctx, record)// andalkan UNIQUE constraint di kolom `key`
+	err = s.idempotencyRepo.Insert(ctx, record) // andalkan UNIQUE constraint di kolom `key`
 	if err == nil {
 		logger.Debug("idempotency key claimed successfully")
-		return true, "", nil// key baru, berhasil diklaim → lanjut proses
+		return true, "", nil // key baru, berhasil diklaim → lanjut proses
 	}
 
 	if !errors.Is(err, apperror.ErrDuplicatedKey) {
-		return false, "", fmt.Errorf("insert idempotency key: %w", err)// error DB beneran, bukan soal duplicate
+		return false, "", fmt.Errorf("insert idempotency key: %w", err) // error DB beneran, bukan soal duplicate
 	}
 
 	existing, findErr := s.idempotencyRepo.FindByKey(ctx, key)
@@ -75,22 +72,22 @@ func (s *idempotencyServiceImpl) Claim(ctx context.Context, key string, userID u
 	}
 
 	// Key sudah ada — reuse trik yang sama seperti dulu: pastikan `TranslateError: true`
-    // di gorm.Open() supaya errors.Is(err, gorm.ErrDuplicatedKey) bisa dipakai langsung,
-    // tanpa cek manual kode error driver MySQL (1062).
+	// di gorm.Open() supaya errors.Is(err, gorm.ErrDuplicatedKey) bisa dipakai langsung,
+	// tanpa cek manual kode error driver MySQL (1062).
 	if existing.RequestHash != reqHash {
 		logger.WithFields(logrus.Fields{
 			"existing_hash": existing.RequestHash, "new_hash": reqHash,
 		}).Warn("idempotency key reused with different payload")
-		return false, "", apperror.ErrIdempotencyKeyConflict// 409 — key sama, payload beda
+		return false, "", apperror.ErrIdempotencyKeyConflict // 409 — key sama, payload beda
 	}
 
 	switch existing.Status {
 	case entity.IdemStatusCompleted:
 		logger.Info("idempotency key already completed")
-		return false, existing.ResponseBody, nil// replay — inilah yang bikin retry aman
+		return false, existing.ResponseBody, nil // replay — inilah yang bikin retry aman
 	case entity.IdemStatusProcessing:
 		return false, "", apperror.ErrRequestInProgress // 409 — request lain masih jalan
-	default:// FAILED
+	default: // FAILED
 		return false, "", apperror.ErrPreviousAttemptFailed
 	}
 }

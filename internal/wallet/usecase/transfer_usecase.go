@@ -16,11 +16,6 @@ import (
 
 type TransferUsecase interface {
 	Transfer(ctx context.Context, fromUserID uint, request dto.TransferRequest, idemKey string) (*dto.TransferResponse, error)
-	// logic: resolve from/to wallet by user_id (tanpa lock) -> validasi self-transfer
-	//   -> idempotency.Claim -> !claimed? return cached
-	//   -> WithTx: ordered lock (ID kecil dulu) -> re-map sender/recipient -> validasi saldo cukup
-	//      -> mutasi 2 balance -> Save keduanya -> transferRepo.Create -> transactionRepo.Create x2 (OUT & IN)
-	//   -> commit -> idempotency.Complete -> return response (sisi sender)
 }
 
 type transferUsecaseImpl struct {

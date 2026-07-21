@@ -14,10 +14,7 @@ import (
 
 type TransactionUsecase interface {
 	GetTransactionHistory(ctx context.Context, userID uint, filter dto.TransactionFilter) (*dto.TransactionListResponse, error)
-	// logic: resolve walletID dari userID -> FindByWalletID(filter) -> mapping DTO + meta pagination
-
 	GetTransactionDetail(ctx context.Context, userID uint, transactionID uint) (*dto.TransactionResponse, error)
-	// logic: FindByID -> validasi transaction.WalletID milik userID ini (cegah lihat punya orang lain) -> mapping DTO
 }
 
 type transactionUsecaseImpl struct {
