@@ -10,15 +10,13 @@ import (
 	"gorm.io/gorm"
 )
 
+//go:generate mockery
+//mockery:generate: true
+//mockery:filename: ../mocks/mock_transaction_repository.go
 type TransactionRepository interface {
 	Create(tx *gorm.DB, transaction *entity.Transaction) error
-	// insert baris transaksi — dipanggil dalam DB transaction yang sama dgn WalletRepository.Save
-
 	FindByID(ctx context.Context, id uint) (*entity.Transaction, error)
-	// untuk GET /transactions/:id
-
 	FindByWalletID(ctx context.Context, walletID uint, filter dto.TransactionFilter) ([]entity.Transaction, int64, error)
-	// list riwayat dgn pagination + filter type/date — untuk GET /transactions, sekalian total count
 }
 
 type transactionRepositoryImpl struct {
