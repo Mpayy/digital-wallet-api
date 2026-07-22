@@ -9,6 +9,10 @@ import (
 	"gorm.io/gorm"
 )
 
+//go:generate mockery
+//mockery:generate: true
+//mockery:filename: ../mocks/mock_auth_repository.go
+
 type AuthRepository interface {
 	Create(ctx context.Context, user *entity.User) error
 	FindByEmail(ctx context.Context, email string) (*entity.User, error)

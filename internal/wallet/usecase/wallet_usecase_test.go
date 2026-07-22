@@ -18,7 +18,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func newTestLogger() *logrus.Logger {
+func newTestLoggerWallet() *logrus.Logger {
 	log := logrus.New()
 	log.SetOutput(io.Discard)
 	return log
@@ -28,7 +28,7 @@ func setupWalletUsecase(t *testing.T) (usecase.WalletUsecase, *mocks.MockWalletR
 	walletRepo := mocks.NewMockWalletRepository(t)
 	transactionRepo := mocks.NewMockTransactionRepository(t)
 	idemService := mocks.NewMockIdempotencyService(t)
-	log := newTestLogger()
+	log := newTestLoggerWallet()
 
 	usecase := usecase.NewWalletUsecase(walletRepo, transactionRepo, idemService, log)
 	t.Cleanup(func() {

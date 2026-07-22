@@ -26,14 +26,15 @@ type AuthUsecase interface {
 
 type authUsecaseImpl struct {
 	AuthRepo      authRepo.AuthRepository
+	AuthRedisRepo authRepo.AuthRedisRepository
 	WalletUsecase usecase.WalletUsecase
 	RedisCli      *redis.Client
 	JwtToken      jwt.JwtToken
 	Log           *logrus.Logger
 }
 
-func NewAuthUsecase(authRepo authRepo.AuthRepository, walletUsecase usecase.WalletUsecase, redisCli *redis.Client, jwtToken jwt.JwtToken, log *logrus.Logger) AuthUsecase {
-	return &authUsecaseImpl{AuthRepo: authRepo, WalletUsecase: walletUsecase, RedisCli: redisCli, JwtToken: jwtToken, Log: log}
+func NewAuthUsecase(authRepo authRepo.AuthRepository, authRedisRepo authRepo.AuthRedisRepository, walletUsecase usecase.WalletUsecase, redisCli *redis.Client, jwtToken jwt.JwtToken, log *logrus.Logger) AuthUsecase {
+	return &authUsecaseImpl{AuthRepo: authRepo, AuthRedisRepo: authRedisRepo, WalletUsecase: walletUsecase, RedisCli: redisCli, JwtToken: jwtToken, Log: log}
 }
 
 func (u *authUsecaseImpl) Register(ctx context.Context, request dto.RegisterRequest) (*dto.RegisterResponse, error) {
@@ -103,9 +104,8 @@ func (u *authUsecaseImpl) Login(ctx context.Context, request dto.LoginRequest) (
 		return nil, fmt.Errorf("marshal auth data for email %s: %w", request.Email, err)
 	}
 
-	err = u.RedisCli.Set(ctx, token, authData, jwt.TokenDuration).Err()
-	if err != nil {
-		return nil, fmt.Errorf("set auth data in redis for email %s: %w", request.Email, err)
+	if err := u.AuthRedisRepo.SaveSession(ctx, token, authData, jwt.TokenDuration); err != nil {
+		return nil, fmt.Errorf("save session: %w", err)
 	}
 
 	logger.Info("User logged in successfully")
@@ -118,9 +118,8 @@ func (u *authUsecaseImpl) Logout(ctx context.Context, token string) error {
 	logger := u.Log.WithField("token", token)
 	logger.Debug("Attempting to logout user")
 
-	err := u.RedisCli.Del(ctx, token).Err()
-	if err != nil {
-		return fmt.Errorf("delete auth data from redis for token %s: %w", token, err)
+	if err := u.AuthRedisRepo.DeleteSession(ctx, token); err != nil {
+		return fmt.Errorf("delete session: %w", err)
 	}
 
 	logger.Info("User logged out successfully")

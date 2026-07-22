@@ -30,13 +30,14 @@ func InitializeAPI() *Application {
 	client := config.NewRedisClient(viper)
 	app := config.NewApp(engine, logger, viper, db, client)
 	authRepository := repository.NewAuthRepository(db)
+	authRedisRepository := repository.NewAuthRedisRepository(client)
 	walletRepository := repository2.NewWalletRepository(db)
 	transactionRepository := repository2.NewTransactionRepository(db)
 	idempotencyRepository := repository2.NewIdempotencyRepository(db)
 	idempotencyService := usecase.NewIdempotencyService(logger, idempotencyRepository)
 	walletUsecase := usecase.NewWalletUsecase(walletRepository, transactionRepository, idempotencyService, logger)
 	jwtToken := jwt.NewJwtToken(viper)
-	authUsecase := usecase2.NewAuthUsecase(authRepository, walletUsecase, client, jwtToken, logger)
+	authUsecase := usecase2.NewAuthUsecase(authRepository, authRedisRepository, walletUsecase, client, jwtToken, logger)
 	validate := config.NewValidator()
 	authHandler := authhandler.NewAuthHandler(authUsecase, validate, logger)
 	transferRepository := repository2.NewTransferRepository(db)
@@ -44,7 +45,7 @@ func InitializeAPI() *Application {
 	walletHandler := handler.NewWalletHandler(walletUsecase, transferUsecase, validate)
 	transactionUsecase := usecase.NewTransactionUsecase(transactionRepository, walletUsecase, logger)
 	transactionHandler := handler.NewTransactionHandler(transactionUsecase, validate)
-	jwtMiddleware := middleware.NewJwtMiddleware(jwtToken, client, logger)
+	jwtMiddleware := middleware.NewJwtMiddleware(jwtToken, authRedisRepository, logger)
 	router := NewRouter(engine, logger, authHandler, walletHandler, transactionHandler, jwtMiddleware)
 	application := NewApplication(app, router)
 	return application
@@ -52,7 +53,7 @@ func InitializeAPI() *Application {
 
 // wire.go:
 
-var authSet = wire.NewSet(repository.NewAuthRepository, usecase2.NewAuthUsecase, authhandler.NewAuthHandler)
+var authSet = wire.NewSet(repository.NewAuthRepository, repository.NewAuthRedisRepository, usecase2.NewAuthUsecase, authhandler.NewAuthHandler)
 
 var walletSet = wire.NewSet(repository2.NewWalletRepository, usecase.NewWalletUsecase, handler.NewWalletHandler)
 
