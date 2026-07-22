@@ -11,14 +11,15 @@ import (
 	"github.com/Mpayy/digital-wallet-api/internal/config"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
 	loggerMiddleware "github.com/Mpayy/digital-wallet-api/internal/pkg/middleware"
+	walletHandler "github.com/Mpayy/digital-wallet-api/internal/wallet/handler"
 	walletRepo "github.com/Mpayy/digital-wallet-api/internal/wallet/repository"
 	walletUsecase "github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
-	walletHandler "github.com/Mpayy/digital-wallet-api/internal/wallet/handler"
 	"github.com/google/wire"
 )
 
 var authSet = wire.NewSet(
 	authRepo.NewAuthRepository,
+	authRepo.NewAuthRedisRepository,
 	authUsecase.NewAuthUsecase,
 	authHandler.NewAuthHandler,
 )

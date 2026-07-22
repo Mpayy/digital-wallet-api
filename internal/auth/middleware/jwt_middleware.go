@@ -4,22 +4,22 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Mpayy/digital-wallet-api/internal/auth/repository"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/response"
 	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 )
 
 type JwtMiddleware struct {
-	JwtToken jwt.JwtToken
-	RedisCli *redis.Client
-	Log      *logrus.Logger
+	JwtToken      jwt.JwtToken
+	AuthRedisRepo repository.AuthRedisRepository
+	Log           *logrus.Logger
 }
 
-func NewJwtMiddleware(token jwt.JwtToken, client *redis.Client, log *logrus.Logger) *JwtMiddleware {
-	return &JwtMiddleware{JwtToken: token, RedisCli: client, Log: log}
+func NewJwtMiddleware(token jwt.JwtToken, authRedisRepo repository.AuthRedisRepository, log *logrus.Logger) *JwtMiddleware {
+	return &JwtMiddleware{JwtToken: token, AuthRedisRepo: authRedisRepo, Log: log}
 }
 
 func (m *JwtMiddleware) AuthMiddleware() gin.HandlerFunc {
@@ -43,13 +43,12 @@ func (m *JwtMiddleware) AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		result, err := m.RedisCli.Exists(ctx, token).Result()
+		exists, err := m.AuthRedisRepo.SessionExists(ctx, token)
 		if err != nil {
-			response.Handle(ctx, fmt.Errorf("check session in redis: %w", err))
+			response.Handle(ctx, fmt.Errorf("check session: %w", err))
 			return
 		}
-
-		if result == 0 {
+		if !exists {
 			response.Handle(ctx, apperror.ErrUnauthorized)
 			return
 		}

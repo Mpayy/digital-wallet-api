@@ -232,6 +232,18 @@ func TestIdempotencyService_Claim(t *testing.T) {
 		assert.Empty(t, cache)
 		assert.ErrorIs(t, err, apperror.ErrPreviousAttemptFailed)
 	})
+
+	t.Run("failed_find_by_key_returns_record_not_found_is_treated_as_internal_error", func(t *testing.T) {
+		usecase, idemRepo := setupIdempotencyService(t)
+
+		idemRepo.EXPECT().Insert(mock.Anything, mock.Anything).Return(apperror.ErrDuplicatedKey)
+		idemRepo.EXPECT().FindByKey(mock.Anything, idemKey).Return(nil, apperror.ErrRecordNotFound)
+
+		claimed, cache, err := usecase.Claim(ctx, idemKey, userID, endpoint, payload)
+		assert.False(t, claimed)
+		assert.Empty(t, cache)
+		assert.NotErrorIs(t, err, apperror.ErrMissingIdempotencyKey)
+	})
 }
 
 func TestIdempotencyService_Complete(t *testing.T) {
