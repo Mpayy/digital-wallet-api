@@ -62,7 +62,7 @@ func (u *transferUsecaseImpl) Transfer(ctx context.Context, fromUserID uint, req
 	toWallet, err := u.walletRepo.FindByUserID(ctx, request.ToUserID)
 	if err != nil {
 		if errors.Is(err, apperror.ErrRecordNotFound) {
-			return nil, apperror.ErrWalletNotFound
+			return nil, apperror.ErrRecipientNotFound
 		}
 		return nil, fmt.Errorf("find recipient wallet: %w", err)
 	}
