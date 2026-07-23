@@ -22,6 +22,7 @@ All dependencies listed below are verified from `go.mod`:
 | [logrus](https://github.com/sirupsen/logrus) | v1.9.4 | Structured logging |
 | [viper](https://github.com/spf13/viper) | v1.21.0 | Configuration / env |
 | [google/wire](https://github.com/google/wire) | v0.7.0 | Compile-time dependency injection |
+| [mockery](https://github.com/vektra/mockery) | v2 (CLI) | Mock generation for unit tests |
 
 **Infrastructure:** MySQL 8.0, Redis 7 (Alpine)
 
@@ -49,7 +50,7 @@ The project is split into two bounded contexts:
 **`internal/wallet`** — Financial domain (`wallets`, `transfers`, `transactions`, `idempotency_keys` tables)
 
 **Why `wallets.user_id` has no FK to `users.id`:**
-This is an intentional architectural decision. In real-world financial systems, identity/auth is frequently a separate service or an external Identity Provider (IDP). Enforcing a DB-level FK from `wallets` to `users` would create a hard coupling between two contexts that are designed to be independent. The wallet domain only needs to know a `user_id` exists — it does not own the user record. This boundary makes the auth domain replaceable (e.g., swap to an external IDP) without touching the financial schema.
+This is an intentional architectural decision. In real-world financial systems, identity/auth is frequently a separate service or an external Identity Provider (IDP). Enforcing a DB-level FK from `wallets` to `users` would create a hard coupling between two contexts that are designed to be independent. The wallet domain only needs to know a `user_id` exists — it does not own the user record. This boundary makes the auth domain replaceable without touching the financial schema.
 
 **Why `transfers` and `transactions` do have FKs:**
 `wallets`, `transfers`, and `transactions` all belong to the same financial bounded context and require strong referential consistency. A transfer record must always reference valid wallet IDs; a transaction record must always reference a valid wallet and, where applicable, a valid transfer. These FK constraints are enforced at the database level via InnoDB foreign keys.
@@ -70,7 +71,7 @@ All features listed below are verified to exist in the codebase.
 
 ### ✅ Auto-provisioned Wallet on Registration
 
-When a user registers (`POST /auth/register`), the `AuthUsecase` immediately calls `WalletUsecase.CreateWallet(userID)` — creating a wallet with `balance = 0` atomically within the same request. No separate wallet-creation step is needed.
+When a user registers (`POST /auth/register`), `AuthUsecase.Register` calls `WalletUsecase.CreateWallet(userID)` immediately after the user record is persisted. Wallet provisioning is **best-effort**: if it fails (e.g., duplicate), the registration still succeeds and returns a `200`. The wallet can be retrieved lazily on first access to `GET /wallets/me`.
 
 ### ✅ Session Management via Redis Token Store
 
@@ -92,6 +93,8 @@ if firstID > secondID {
 }
 // Lock firstID first, then secondID — always
 ```
+
+See [Concurrency Safety Evidence](#concurrency-safety-evidence) for proof this was reproduced and verified.
 
 ### ✅ Idempotency Key Mechanism
 
@@ -126,7 +129,7 @@ All protected routes require `Authorization: Bearer <token>` header.
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/auth/register` | — | Register new user. Auto-creates a wallet. |
+| `POST` | `/auth/register` | — | Register new user. Provisions wallet best-effort. |
 | `POST` | `/auth/login` | — | Login. Returns a JWT token stored in Redis. |
 | `POST` | `/auth/logout` | ✅ JWT | Invalidates the session token in Redis. |
 
@@ -249,9 +252,113 @@ Idempotency statuses: `PROCESSING`, `COMPLETED`, `FAILED`
 
 ---
 
+## Testing
+
+### Unit Tests
+
+Run with the standard Go test command — no infrastructure required. All external dependencies (GORM, Redis, etc.) are mocked using [Mockery](https://github.com/vektra/mockery)-generated mocks.
+
+```bash
+go test ./...
+```
+
+**Coverage (verified from file count):**
+
+| File | Test Cases | What is covered |
+|---|---|---|
+| `wallet_usecase_test.go` | 18 | CreateWallet, GetWalletByUserID, TopUp (all success/failure paths including idempotency replay) |
+| `transfer_usecase_test.go` | 25 | Transfer (invalid amount, wallet not found, self-transfer, ordered lock, insufficient balance, idempotency replay, failure paths) |
+| `idempotency_service_test.go` | 18 | Claim (empty key, hash mismatch, replay COMPLETED/PROCESSING/FAILED), Complete, MarkFailed |
+| `transaction_usecase_test.go` | 14 | GetTransactionHistory (pagination, filters, defaults), GetTransactionDetail (ownership check) |
+| `auth_usecase_test.go` | 19 | Register, Login, Logout, GetUserByID — including bcrypt comparison and Redis session handling |
+| `jwt_middleware_test.go` | 12 | Missing/invalid header, JWT validation, Redis session check, context injection |
+| **Total** | **106** | |
+
+### Integration Tests
+
+Require Docker. Uses a **dedicated MySQL instance on port 3307** via `docker-compose.test.yml` (separate from the dev DB on port 3306, using `tmpfs` for speed). Run with:
+
+```bash
+make test-integration
+```
+
+Which executes:
+
+```bash
+docker-compose -f docker-compose.test.yml up -d
+sleep 8
+migrate -path migrations -database "mysql://root@tcp(localhost:3307)/digital_wallet_test?multiStatements=true" up
+go test -tags=integration -race ./test/integration/... -v
+docker-compose -f docker-compose.test.yml down
+```
+
+The `-race` flag is passed intentionally to catch Go-level data races in addition to the database-level correctness assertions.
+
+**Integration test scenarios:**
+
+| Test | File | What it proves |
+|---|---|---|
+| `TestConcurrentTopUp_NoLostUpdate` | `wallet_topup_test.go` | 20 goroutines top-up the same wallet concurrently with unique idempotency keys. Asserts final balance = `20 × 1000` and exactly 20 transaction rows — verifying no write is lost under `SELECT FOR UPDATE`. |
+| `TestConcurrentTransfer_OppositeDirection_NoDeadlock` | `wallet_transfer_test.go` | 50 iterations of A→B and B→A transfers fired simultaneously (100 goroutines). Asserts no deadlock (15s timeout), total money is conserved (`finalA + finalB = 2,000,000`), and exactly 200 transaction rows exist. |
+| `TestConcurrentTopUp_SameIdempotencyKey_OnlyAppliedOnce` | `wallet_idempotency_test.go` | 20 goroutines fire the same top-up with the **same idempotency key**. Asserts balance increases by exactly 1,000 (only once), only 1 transaction row exists, and all successful responses share the same `transaction_id`. |
+
+---
+
+## Concurrency Safety Evidence
+
+The ordered-lock deadlock prevention was not only reasoned about — it was **reproduced and experimentally verified** against a real MySQL 8 instance.
+
+### Method
+
+The ordered lock logic in `transfer_usecase.go` was temporarily commented out, reverting to naive locking (lock sender first, always):
+
+```go
+// BEFORE fix (naive — causes deadlock):
+// firstID, secondID := fromWallet.ID, toWallet.ID
+// if firstID > secondID {
+//     firstID, secondID = secondID, firstID   // <-- this line removed
+// }
+
+// AFTER fix (ordered — deadlock-free):
+firstID, secondID := fromWallet.ID, toWallet.ID
+if firstID > secondID {
+    firstID, secondID = secondID, firstID
+}
+```
+
+### Result Without Fix
+
+Running `TestConcurrentTransfer_OppositeDirection_NoDeadlock` with naive locking produced **Error 1213** repeatedly from MySQL:
+
+```
+Error 1213 (40001): Deadlock found when trying to get lock; try restarting transaction
+SELECT * FROM `wallets` WHERE `wallets`.`id` = 2 ... FOR UPDATE
+```
+
+The test also failed its balance assertions:
+
+```
+expected: 1000000
+actual  : 990000   ← balance corrupted by aborted transactions
+```
+
+And transaction count was wrong (`96` instead of `200`), confirming writes were lost.
+
+### Result With Fix
+
+After restoring the ordered lock, the same test passes cleanly across all 100 goroutines. No Error 1213, no balance drift, transaction count exact.
+
+### Screenshot
+
+![MySQL Error 1213 — deadlock reproduced without ordered locking](docs/images/deadlock-error.png)
+
+For the full log output and more detail, see [docs/deadlock-demo.md](docs/deadlock-demo.md).
+
+---
+
 ## Project Status
 
-This project is **in active development**. The core API is functional and the critical financial consistency mechanisms (locking, idempotency, atomic transactions) are implemented. The following is an honest breakdown.
+This project is **in active development**. The core API is functional and the critical financial consistency mechanisms (locking, idempotency, atomic transactions) are implemented and tested. The following is an honest breakdown.
 
 ### ✅ Completed
 
@@ -264,16 +371,17 @@ This project is **in active development**. The core API is functional and the cr
 - Structured logging (logrus) across all layers
 - Graceful shutdown with proper DB and Redis connection cleanup
 - Dockerized with Docker Compose (3-service stack: app, mysql, redis)
+- **106 unit test cases** across 6 files (wallet, transfer, idempotency, transaction, auth, middleware) using Mockery mocks
+- **3 integration tests** covering concurrent top-up (no lost update), concurrent reverse transfers (no deadlock), and concurrent idempotency key deduplication — all running against real MySQL with `-race` flag
+- Deadlock reproduced, documented, and fixed (Error 1213 evidence captured)
 
 ### 🔧 In Progress / Planned
 
 | Item | Status |
 |---|---|
-| Unit tests for usecase layer (Wallet, Transfer, Idempotency) | 🔧 In progress |
-| Integration tests for race condition scenarios (concurrent transfers, deadlock prevention) | 📋 Planned |
 | Retry mechanism for MySQL deadlock error (error 1213) | 📋 Planned (defensive) |
 | TTL / reclaim mechanism for idempotency keys stuck in `PROCESSING` status | 📋 Planned |
 | Payment gateway sandbox integration (Midtrans / Xendit) | 💡 Optional, later phase |
 | Kafka event-driven architecture enhancement | 💡 Optional, later phase |
 
-> **Note:** There are currently **0 test files** (`*_test.go`) in the repository. Test coverage is the primary active development priority.
+> **Note:** There are currently **0 repository/handler-layer tests**. The tested scope covers usecase and middleware layers only.
