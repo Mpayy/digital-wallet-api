@@ -69,6 +69,3 @@ volumes:
 networks:
   digital-wallet-api-network:
     driver: bridge
-    
- 
-    

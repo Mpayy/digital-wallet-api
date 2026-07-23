@@ -21,6 +21,9 @@ type CustomClaim struct {
 	jwt.RegisteredClaims
 }
 
+//go:generate mockery
+//mockery:generate: true
+//mockery:filename: ../mocks/mock_jwt_token.go
 type JwtToken interface {
 	Create(auth *Auth) (string, error)
 	Validate(token string) (*Auth, error)

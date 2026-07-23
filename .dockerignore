@@ -9,6 +9,7 @@ coverage.out
 
 README.md
 CHANGELOG.md
+Makefile
 
 .idea/
 .vscode/
