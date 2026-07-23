@@ -37,7 +37,7 @@ func InitializeAPI() *Application {
 	idempotencyService := usecase.NewIdempotencyService(logger, idempotencyRepository)
 	walletUsecase := usecase.NewWalletUsecase(walletRepository, transactionRepository, idempotencyService, logger)
 	jwtToken := jwt.NewJwtToken(viper)
-	authUsecase := usecase2.NewAuthUsecase(authRepository, authRedisRepository, walletUsecase, client, jwtToken, logger)
+	authUsecase := usecase2.NewAuthUsecase(authRepository, authRedisRepository, walletUsecase, jwtToken, logger)
 	validate := config.NewValidator()
 	authHandler := authhandler.NewAuthHandler(authUsecase, validate, logger)
 	transferRepository := repository2.NewTransferRepository(db)

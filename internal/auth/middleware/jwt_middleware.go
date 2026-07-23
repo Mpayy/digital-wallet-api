@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Mpayy/digital-wallet-api/internal/auth/entity"
 	"github.com/Mpayy/digital-wallet-api/internal/auth/repository"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
@@ -43,7 +44,7 @@ func (m *JwtMiddleware) AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		exists, err := m.AuthRedisRepo.SessionExists(ctx, token)
+		exists, err := m.AuthRedisRepo.SessionExists(ctx, entity.AuthPrefix+token)
 		if err != nil {
 			response.Handle(ctx, fmt.Errorf("check session: %w", err))
 			return

@@ -2,6 +2,7 @@ package entity
 
 import "time"
 
+const AuthPrefix = "auth:session:"
 type User struct {
 	ID        uint   `gorm:"column:id;primaryKey"`
 	Name      string `gorm:"column:name;type:varchar(100);not null"`

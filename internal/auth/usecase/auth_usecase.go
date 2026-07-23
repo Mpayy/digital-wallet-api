@@ -7,12 +7,12 @@ import (
 	"fmt"
 
 	"github.com/Mpayy/digital-wallet-api/internal/auth/dto"
+	"github.com/Mpayy/digital-wallet-api/internal/auth/entity"
 	authEntity "github.com/Mpayy/digital-wallet-api/internal/auth/entity"
 	authRepo "github.com/Mpayy/digital-wallet-api/internal/auth/repository"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
-	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -28,13 +28,12 @@ type authUsecaseImpl struct {
 	AuthRepo      authRepo.AuthRepository
 	AuthRedisRepo authRepo.AuthRedisRepository
 	WalletUsecase usecase.WalletUsecase
-	RedisCli      *redis.Client
 	JwtToken      jwt.JwtToken
 	Log           *logrus.Logger
 }
 
-func NewAuthUsecase(authRepo authRepo.AuthRepository, authRedisRepo authRepo.AuthRedisRepository, walletUsecase usecase.WalletUsecase, redisCli *redis.Client, jwtToken jwt.JwtToken, log *logrus.Logger) AuthUsecase {
-	return &authUsecaseImpl{AuthRepo: authRepo, AuthRedisRepo: authRedisRepo, WalletUsecase: walletUsecase, RedisCli: redisCli, JwtToken: jwtToken, Log: log}
+func NewAuthUsecase(authRepo authRepo.AuthRepository, authRedisRepo authRepo.AuthRedisRepository, walletUsecase usecase.WalletUsecase, jwtToken jwt.JwtToken, log *logrus.Logger) AuthUsecase {
+	return &authUsecaseImpl{AuthRepo: authRepo, AuthRedisRepo: authRedisRepo, WalletUsecase: walletUsecase, JwtToken: jwtToken, Log: log}
 }
 
 func (u *authUsecaseImpl) Register(ctx context.Context, request dto.RegisterRequest) (*dto.RegisterResponse, error) {
@@ -57,12 +56,12 @@ func (u *authUsecaseImpl) Register(ctx context.Context, request dto.RegisterRequ
 		if errors.Is(err, apperror.ErrDuplicatedKey) {
 			return nil, apperror.ErrDuplicatedEmail
 		}
-		return nil, fmt.Errorf("create user: %w: %w", apperror.ErrInternalServer, err)
+		return nil, fmt.Errorf("create user: %w", err)
 	}
 
 	_, err = u.WalletUsecase.CreateWallet(ctx, user.ID)
 	if err != nil {
-		return nil, err
+		logger.WithError(err).Error("failed to provision wallet during registration — will self-heal on first wallet access")
 	}
 
 	logger.Info("User registered successfully")
@@ -104,7 +103,7 @@ func (u *authUsecaseImpl) Login(ctx context.Context, request dto.LoginRequest) (
 		return nil, fmt.Errorf("marshal auth data for email %s: %w", request.Email, err)
 	}
 
-	if err := u.AuthRedisRepo.SaveSession(ctx, token, authData, jwt.TokenDuration); err != nil {
+	if err := u.AuthRedisRepo.SaveSession(ctx, entity.AuthPrefix+token, authData, jwt.TokenDuration); err != nil {
 		return nil, fmt.Errorf("save session: %w", err)
 	}
 
@@ -118,7 +117,7 @@ func (u *authUsecaseImpl) Logout(ctx context.Context, token string) error {
 	logger := u.Log.WithField("token", token)
 	logger.Debug("Attempting to logout user")
 
-	if err := u.AuthRedisRepo.DeleteSession(ctx, token); err != nil {
+	if err := u.AuthRedisRepo.DeleteSession(ctx, entity.AuthPrefix+token); err != nil {
 		return fmt.Errorf("delete session: %w", err)
 	}
 
