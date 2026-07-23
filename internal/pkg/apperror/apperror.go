@@ -2,6 +2,7 @@ package apperror
 
 import (
 	"net/http"
+	"reflect"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -71,21 +72,55 @@ func TranslateValidationError(valErr validator.ValidationErrors) map[string]stri
 	fieldError := make(map[string]string)
 
 	for _, e := range valErr {
-		var message string
-		switch e.Tag() {
-		case "required":
-			message = "must be filled"
-		case "email":
-			message = "must be a valid email"
-		case "min":
-			message = "must be at least " + e.Param() + " characters long"
-		case "max":
-			message = "must be at most " + e.Param() + " characters long"
-		default:
-			message = "invalid input value"
-		}
-		fieldError[strings.ToLower(e.Field())] = message
+		fieldError[strings.ToLower(e.Field())] = translateTag(e)
 	}
 
 	return fieldError
+}
+
+func translateTag(e validator.FieldError) string {
+	switch e.Tag() {
+	case "required":
+		return "must be filled"
+	case "email":
+		return "must be a valid email"
+	case "min":
+		if isNumericKind(e.Kind()) {
+			return "must be at least " + e.Param()
+		}
+		return "must be at least " + e.Param() + " characters long"
+	case "max":
+		if isNumericKind(e.Kind()) {
+			return "must be at most " + e.Param()
+		}
+		return "must be at most " + e.Param() + " characters long"
+	case "gt":
+		return "must be greater than " + e.Param()
+	case "gte":
+		return "must be greater than or equal to " + e.Param()
+	case "lt":
+		return "must be less than " + e.Param()
+	case "lte":
+		return "must be less than or equal to " + e.Param()
+	case "oneof":
+		return "must be one of: " + e.Param()
+	case "datetime":
+		return "must be a valid date in format " + e.Param()
+	case "ltefield":
+		return "must be less than or equal to " + strings.ToLower(e.Param())
+	case "gtefield":
+		return "must be greater than or equal to " + strings.ToLower(e.Param())
+	default:
+		return "invalid input value"
+	}
+}
+
+func isNumericKind(k reflect.Kind) bool {
+	switch k {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		return true
+	}
+	return false
 }

@@ -30,6 +30,22 @@ func NewTransactionHandler(transactionUsecase usecase.TransactionUsecase, valida
 	}
 }
 
+// ListTransactions godoc
+// @Summary      List transaction history
+// @Description  Returns a paginated, filterable list of the authenticated user's wallet transactions.
+// @Tags         transaction
+// @Produce      json
+// @Security     BearerAuth
+// @Param        type       query string false "Filter by type" Enums(TOPUP, TRANSFER_IN, TRANSFER_OUT)
+// @Param        start_date query string false "Start date (YYYY-MM-DD)"
+// @Param        end_date   query string false "End date (YYYY-MM-DD), defaults to today if start_date is set"
+// @Param        page       query int    false "Page number" default(1)
+// @Param        limit      query int    false "Items per page (max 100)" default(10)
+// @Success      200 {object} response.SuccessResponse{data=dto.TransactionListResponse}
+// @Failure      400 {object} response.ErrorResponse{error=apperror.AppError} "BAD_REQUEST / VALIDATION_ERROR"
+// @Failure      401 {object} response.ErrorResponse{error=apperror.AppError} "UNAUTHORIZED / INVALID_TOKEN / TOKEN_HAS_EXPIRED"
+// @Failure      500 {object} response.ErrorResponse{error=apperror.AppError} "INTERNAL_SERVER_ERROR"
+// @Router       /transactions [get]
 func (h *transactionHandlerImpl) ListTransactions(ctx *gin.Context) {
 	auth := middleware.GetAuthUser(ctx)
 	if auth == nil {
@@ -60,6 +76,19 @@ func (h *transactionHandlerImpl) ListTransactions(ctx *gin.Context) {
 	response.ResponseSuccess(ctx, http.StatusOK, history)
 }
 
+// GetTransactionDetail godoc
+// @Summary      Get transaction detail
+// @Description  Returns a single transaction. Returns 404 both when the transaction does not exist and when it belongs to another user, to avoid leaking existence.
+// @Tags         transaction
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path int true "Transaction ID"
+// @Success      200 {object} response.SuccessResponse{data=dto.TransactionResponse}
+// @Failure      400 {object} response.ErrorResponse{error=apperror.AppError} "BAD_REQUEST"
+// @Failure      401 {object} response.ErrorResponse{error=apperror.AppError} "UNAUTHORIZED / INVALID_TOKEN / TOKEN_HAS_EXPIRED"
+// @Failure      404 {object} response.ErrorResponse{error=apperror.AppError} "TRANSACTION_NOT_FOUND"
+// @Failure      500 {object} response.ErrorResponse{error=apperror.AppError} "INTERNAL_SERVER_ERROR"
+// @Router       /transactions/{id} [get]
 func (h *transactionHandlerImpl) GetTransactionDetail(ctx *gin.Context) {
 	auth := middleware.GetAuthUser(ctx)
 	if auth == nil {

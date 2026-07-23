@@ -10,6 +10,19 @@ import (
 	"time"
 )
 
+// @title           Digital Wallet API
+// @version         1.0
+// @description     Digital wallet built with Go, Gin, GORM, and Redis.
+// @host            localhost:8080
+// @BasePath        /api/v1
+// @securitydefinitions.apikey BearerAuth
+// @in                         header
+// @name                       Authorization
+// @description                Type "Bearer" followed by a space and JWT token.
+// @contact.name               Achmad Rifai
+// @contact.url                https://github.com/Mpayy
+// @license.name               MIT
+// @schemes                    http https
 func main() {
 	application := InitializeAPI()
 	app := application.App

@@ -1,35 +1,39 @@
 package main
 
 import (
+	_ "github.com/Mpayy/digital-wallet-api/docs"
 	authHandler "github.com/Mpayy/digital-wallet-api/internal/auth/handler"
 	jwtMiddleware "github.com/Mpayy/digital-wallet-api/internal/auth/middleware"
 	loggerMiddleware "github.com/Mpayy/digital-wallet-api/internal/pkg/middleware"
 	walletHandler "github.com/Mpayy/digital-wallet-api/internal/wallet/handler"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Router struct {
-	App           *gin.Engine
-	Log           *logrus.Logger
-	AuthHandler   authHandler.AuthHandler
-	WalletHandler walletHandler.WalletHandler
+	App                *gin.Engine
+	Log                *logrus.Logger
+	AuthHandler        authHandler.AuthHandler
+	WalletHandler      walletHandler.WalletHandler
 	TransactionHandler walletHandler.TransactionHandler
-	JwtMiddleware *jwtMiddleware.JwtMiddleware
+	JwtMiddleware      *jwtMiddleware.JwtMiddleware
 }
 
 func NewRouter(app *gin.Engine, log *logrus.Logger, authHandler authHandler.AuthHandler, walletHandler walletHandler.WalletHandler, transactionHandler walletHandler.TransactionHandler, jwtMiddleware *jwtMiddleware.JwtMiddleware) *Router {
 	return &Router{
-		App:           app,
-		Log:           log,
-		AuthHandler:   authHandler,
-		WalletHandler: walletHandler,
+		App:                app,
+		Log:                log,
+		AuthHandler:        authHandler,
+		WalletHandler:      walletHandler,
 		TransactionHandler: transactionHandler,
-		JwtMiddleware: jwtMiddleware,
+		JwtMiddleware:      jwtMiddleware,
 	}
 }
 
 func (r *Router) Setup() {
+	r.App.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	v1 := r.App.Group("/api/v1")
 	v1.Use(loggerMiddleware.LoggerMiddleware(r.Log))
 	{
@@ -44,7 +48,7 @@ func (r *Router) Setup() {
 		wallets.POST("/transfer", r.WalletHandler.Transfer)
 
 		transactions := v1.Group("/transactions", r.JwtMiddleware.AuthMiddleware())
-        transactions.GET("", r.TransactionHandler.ListTransactions)
-        transactions.GET("/:id", r.TransactionHandler.GetTransactionDetail)
+		transactions.GET("", r.TransactionHandler.ListTransactions)
+		transactions.GET("/:id", r.TransactionHandler.GetTransactionDetail)
 	}
 }
