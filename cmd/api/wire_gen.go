@@ -12,12 +12,20 @@ import (
 	"github.com/Mpayy/digital-wallet-api/internal/auth/repository"
 	usecase2 "github.com/Mpayy/digital-wallet-api/internal/auth/usecase"
 	"github.com/Mpayy/digital-wallet-api/internal/config"
+	"github.com/Mpayy/digital-wallet-api/internal/payment/gateway"
+	handler2 "github.com/Mpayy/digital-wallet-api/internal/payment/handler"
+	repository3 "github.com/Mpayy/digital-wallet-api/internal/payment/repository"
+	usecase3 "github.com/Mpayy/digital-wallet-api/internal/payment/usecase"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
 	middleware2 "github.com/Mpayy/digital-wallet-api/internal/pkg/middleware"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/handler"
 	repository2 "github.com/Mpayy/digital-wallet-api/internal/wallet/repository"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
 	"github.com/google/wire"
+)
+
+import (
+	_ "github.com/Mpayy/digital-wallet-api/docs"
 )
 
 // Injectors from wire.go:
@@ -46,7 +54,12 @@ func InitializeAPI() *Application {
 	transactionUsecase := usecase.NewTransactionUsecase(transactionRepository, walletUsecase, logger)
 	transactionHandler := handler.NewTransactionHandler(transactionUsecase, validate)
 	jwtMiddleware := middleware.NewJwtMiddleware(jwtToken, authRedisRepository, logger)
-	router := NewRouter(engine, logger, authHandler, walletHandler, transactionHandler, jwtMiddleware)
+	paymentRepository := repository3.NewPaymentRepository(db)
+	paymentCollector := gateway.NewMidtransGateway(viper)
+	paymentUsecase := usecase3.NewPaymentUsecase(paymentRepository, paymentCollector, walletUsecase, logger)
+	paymentHandler := handler2.NewPaymentHandler(paymentUsecase, validate)
+	webhookHandler := handler2.NewWebhookHandler(paymentUsecase)
+	router := NewRouter(engine, logger, authHandler, walletHandler, transactionHandler, jwtMiddleware, paymentHandler, webhookHandler)
 	application := NewApplication(app, router)
 	return application
 }
@@ -55,13 +68,15 @@ func InitializeAPI() *Application {
 
 var authSet = wire.NewSet(repository.NewAuthRepository, repository.NewAuthRedisRepository, usecase2.NewAuthUsecase, authhandler.NewAuthHandler)
 
-var walletSet = wire.NewSet(repository2.NewWalletRepository, usecase.NewWalletUsecase, handler.NewWalletHandler)
+var walletSet = wire.NewSet(repository2.NewWalletRepository, usecase.NewWalletUsecase, handler.NewWalletHandler, wire.Bind(new(usecase3.WalletTopUpper), new(usecase.WalletUsecase)))
 
 var transactionSet = wire.NewSet(repository2.NewTransactionRepository, usecase.NewTransactionUsecase, handler.NewTransactionHandler)
 
 var idempotencySet = wire.NewSet(repository2.NewIdempotencyRepository, usecase.NewIdempotencyService)
 
 var transferSet = wire.NewSet(repository2.NewTransferRepository, usecase.NewTransferUsecase)
+
+var paymentSet = wire.NewSet(repository3.NewPaymentRepository, usecase3.NewPaymentUsecase, handler2.NewPaymentHandler, handler2.NewWebhookHandler, gateway.NewMidtransGateway)
 
 var middlewareSet = wire.NewSet(middleware.NewJwtMiddleware, middleware2.LoggerMiddleware)
 

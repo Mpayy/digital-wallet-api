@@ -9,6 +9,10 @@ import (
 	authRepo "github.com/Mpayy/digital-wallet-api/internal/auth/repository"
 	authUsecase "github.com/Mpayy/digital-wallet-api/internal/auth/usecase"
 	"github.com/Mpayy/digital-wallet-api/internal/config"
+	"github.com/Mpayy/digital-wallet-api/internal/payment/gateway"
+	paymentHandler "github.com/Mpayy/digital-wallet-api/internal/payment/handler"
+	paymentRepo "github.com/Mpayy/digital-wallet-api/internal/payment/repository"
+	paymentUsecase "github.com/Mpayy/digital-wallet-api/internal/payment/usecase"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
 	loggerMiddleware "github.com/Mpayy/digital-wallet-api/internal/pkg/middleware"
 	walletHandler "github.com/Mpayy/digital-wallet-api/internal/wallet/handler"
@@ -28,6 +32,7 @@ var walletSet = wire.NewSet(
 	walletRepo.NewWalletRepository,
 	walletUsecase.NewWalletUsecase,
 	walletHandler.NewWalletHandler,
+	wire.Bind(new(paymentUsecase.WalletTopUpper), new(walletUsecase.WalletUsecase)),
 )
 
 var transactionSet = wire.NewSet(
@@ -44,6 +49,14 @@ var idempotencySet = wire.NewSet(
 var transferSet = wire.NewSet(
 	walletRepo.NewTransferRepository,
 	walletUsecase.NewTransferUsecase,
+)
+
+var paymentSet = wire.NewSet(
+	paymentRepo.NewPaymentRepository,
+	paymentUsecase.NewPaymentUsecase,
+	paymentHandler.NewPaymentHandler,
+	paymentHandler.NewWebhookHandler,
+	gateway.NewMidtransGateway,
 )
 
 var middlewareSet = wire.NewSet(
@@ -73,6 +86,7 @@ func InitializeAPI() *Application {
 		transactionSet,
 		idempotencySet,
 		transferSet,
+		paymentSet,
 		middlewareSet,
 		pkgSet,
 		NewRouter,
