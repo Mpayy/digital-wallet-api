@@ -35,12 +35,15 @@ var (
 	ErrUnauthorized       = &AppError{Code: "UNAUTHORIZED", Message: "unauthorized", Status: http.StatusUnauthorized}
 
 	// Wallet
-	ErrWalletNotFound         = &AppError{Code: "WALLET_NOT_FOUND", Message: "wallet not found", Status: http.StatusNotFound}
-	ErrInsufficientBalance    = &AppError{Code: "INSUFFICIENT_BALANCE", Message: "insufficient balance", Status: http.StatusUnprocessableEntity}
-	ErrInvalidAmount          = &AppError{Code: "INVALID_AMOUNT", Message: "amount must be greater than zero", Status: http.StatusBadRequest}
-	ErrSelfTransferNotAllowed = &AppError{Code: "SELF_TRANSFER_NOT_ALLOWED", Message: "cannot transfer to your own wallet", Status: http.StatusUnprocessableEntity}
-	ErrRecipientNotFound      = &AppError{Code: "RECIPIENT_NOT_FOUND", Message: "recipient not found", Status: http.StatusNotFound}
-	ErrUserHasWalletAlready   = &AppError{Code: "USER_HAS_WALLET_ALREADY", Message: "user already has a wallet", Status: http.StatusUnprocessableEntity}
+	ErrWalletNotFound              = &AppError{Code: "WALLET_NOT_FOUND", Message: "wallet not found", Status: http.StatusNotFound}
+	ErrInsufficientBalance         = &AppError{Code: "INSUFFICIENT_BALANCE", Message: "insufficient balance", Status: http.StatusUnprocessableEntity}
+	ErrInvalidAmount               = &AppError{Code: "INVALID_AMOUNT", Message: "amount must be greater than zero", Status: http.StatusBadRequest}
+	ErrSelfTransferNotAllowed      = &AppError{Code: "SELF_TRANSFER_NOT_ALLOWED", Message: "cannot transfer to your own wallet", Status: http.StatusUnprocessableEntity}
+	ErrRecipientNotFound           = &AppError{Code: "RECIPIENT_NOT_FOUND", Message: "recipient not found", Status: http.StatusNotFound}
+	ErrUserHasWalletAlready        = &AppError{Code: "USER_HAS_WALLET_ALREADY", Message: "user already has a wallet", Status: http.StatusUnprocessableEntity}
+	ErrInvalidWebhookSignature     = &AppError{Code: "INVALID_WEBHOOK_SIGNATURE", Message: "invalid webhook signature", Status: http.StatusUnauthorized}
+	ErrWebhookPayloadTooLarge      = &AppError{Code: "WEBHOOK_PAYLOAD_TOO_LARGE", Message: "webhook payload too large", Status: http.StatusRequestEntityTooLarge}
+	ErrDuplicatePaymentTransaction = &AppError{Code: "DUPLICATE_PAYMENT_TRANSACTION", Message: "duplicate payment transaction", Status: http.StatusConflict}
 
 	// Transaction
 	ErrTransactionNotFound     = &AppError{Code: "TRANSACTION_NOT_FOUND", Message: "transaction not found", Status: http.StatusNotFound}

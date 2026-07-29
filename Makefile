@@ -4,3 +4,13 @@ test-integration:
 	migrate -path migrations -database "mysql://root@tcp(localhost:3307)/digital_wallet_test?multiStatements=true" up
 	go test -tags=integration -race ./test/integration/... -v
 	docker-compose -f docker-compose.test.yml down
+
+migrate-up:
+	migrate -path migrations -database "mysql://root@tcp(localhost:3306)/digital_wallet?multiStatements=true" up
+
+migrate-down:
+	migrate -path migrations -database "mysql://root@tcp(localhost:3306)/digital_wallet?multiStatements=true" down
+
+wire:
+	cd cmd/api && wire
+	
