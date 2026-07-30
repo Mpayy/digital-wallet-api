@@ -13,4 +13,9 @@ migrate-down:
 
 wire:
 	cd cmd/api && wire
-	
+
+mock:
+	go generate ./...
+
+test-unit:
+	go clean -testcache && go test ./... -v

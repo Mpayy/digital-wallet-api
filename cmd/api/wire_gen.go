@@ -68,7 +68,7 @@ func InitializeAPI() *Application {
 
 var authSet = wire.NewSet(repository.NewAuthRepository, repository.NewAuthRedisRepository, usecase2.NewAuthUsecase, authhandler.NewAuthHandler)
 
-var walletSet = wire.NewSet(repository2.NewWalletRepository, usecase.NewWalletUsecase, handler.NewWalletHandler, wire.Bind(new(usecase3.WalletTopUpper), new(usecase.WalletUsecase)))
+var walletSet = wire.NewSet(repository2.NewWalletRepository, usecase.NewWalletUsecase, handler.NewWalletHandler, wire.Bind(new(usecase3.WalletTopUpper), new(usecase.WalletUsecase)), wire.Bind(new(usecase2.WalletProvisioner), new(usecase.WalletUsecase)))
 
 var transactionSet = wire.NewSet(repository2.NewTransactionRepository, usecase.NewTransactionUsecase, handler.NewTransactionHandler)
 

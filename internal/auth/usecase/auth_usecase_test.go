@@ -14,7 +14,6 @@ import (
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
 	jwtMocks "github.com/Mpayy/digital-wallet-api/internal/pkg/mocks"
 	walletEntity "github.com/Mpayy/digital-wallet-api/internal/wallet/entity"
-	walletMocks "github.com/Mpayy/digital-wallet-api/internal/wallet/mocks"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -28,22 +27,22 @@ func newTestLoggerAuth() *logrus.Logger {
 	return log
 }
 
-func setupAuthUsecase(t *testing.T) (usecase.AuthUsecase, *mocks.MockAuthRepository, *mocks.MockAuthRedisRepository, *walletMocks.MockWalletUsecase, *jwtMocks.MockJwtToken) {
+func setupAuthUsecase(t *testing.T) (usecase.AuthUsecase, *mocks.MockAuthRepository, *mocks.MockAuthRedisRepository, *mocks.MockWalletProvisioner, *jwtMocks.MockJwtToken) {
 	authRepo := mocks.NewMockAuthRepository(t)
 	authRedisRepo := mocks.NewMockAuthRedisRepository(t)
-	walletUsecase := walletMocks.NewMockWalletUsecase(t)
+	walletProvisioner := mocks.NewMockWalletProvisioner(t)
 	jwtToken := jwtMocks.NewMockJwtToken(t)
 	log := newTestLoggerAuth()
 
-	uc := usecase.NewAuthUsecase(authRepo, authRedisRepo, walletUsecase, jwtToken, log)
+	uc := usecase.NewAuthUsecase(authRepo, authRedisRepo, walletProvisioner, jwtToken, log)
 	t.Cleanup(func() {
 		authRepo.AssertExpectations(t)
 		authRedisRepo.AssertExpectations(t)
-		walletUsecase.AssertExpectations(t)
+		walletProvisioner.AssertExpectations(t)
 		jwtToken.AssertExpectations(t)
 	})
 
-	return uc, authRepo, authRedisRepo, walletUsecase, jwtToken
+	return uc, authRepo, authRedisRepo, walletProvisioner, jwtToken
 }
 
 func TestAuthUsecase_Register(t *testing.T) {
@@ -78,14 +77,14 @@ func TestAuthUsecase_Register(t *testing.T) {
 	})
 
 	t.Run("success_register_with_wallet_provisioned", func(t *testing.T) {
-		uc, authRepo, _, walletUsecase, _ := setupAuthUsecase(t)
+		uc, authRepo, _, walletProvisioner, _ := setupAuthUsecase(t)
 
 		authRepo.EXPECT().Create(mock.Anything, mock.MatchedBy(func(u *entity.User) bool {
 			u.ID = 1 // simulasikan GORM ngisi ID setelah insert
 			return u.Email == req.Email
 		})).Return(nil)
 
-		walletUsecase.EXPECT().CreateWallet(mock.Anything, uint(1)).Return(&walletEntity.Wallet{ID: 1, UserID: 1}, nil)
+		walletProvisioner.EXPECT().CreateWallet(mock.Anything, uint(1)).Return(&walletEntity.Wallet{ID: 1, UserID: 1}, nil)
 
 		result, err := uc.Register(ctx, req)
 		assert.NoError(t, err)
@@ -95,13 +94,13 @@ func TestAuthUsecase_Register(t *testing.T) {
 	})
 
 	t.Run("success_register_even_if_wallet_provisioning_fails", func(t *testing.T) {
-		uc, authRepo, _, walletUsecase, _ := setupAuthUsecase(t)
+		uc, authRepo, _, walletProvisioner, _ := setupAuthUsecase(t)
 
 		authRepo.EXPECT().Create(mock.Anything, mock.Anything).Return(nil)
-		walletUsecase.EXPECT().CreateWallet(mock.Anything, mock.Anything).Return(nil, dbErr)
+		walletProvisioner.EXPECT().CreateWallet(mock.Anything, mock.Anything).Return(nil, dbErr)
 
 		result, err := uc.Register(ctx, req)
-		assert.NoError(t, err) // <- ini yang membuktikan best-effort: Register tetap sukses
+		assert.NoError(t, err)
 		assert.NotNil(t, result)
 	})
 }

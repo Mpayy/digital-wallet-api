@@ -8,14 +8,20 @@ import (
 
 	"github.com/Mpayy/digital-wallet-api/internal/auth/dto"
 	"github.com/Mpayy/digital-wallet-api/internal/auth/entity"
-	authEntity "github.com/Mpayy/digital-wallet-api/internal/auth/entity"
 	authRepo "github.com/Mpayy/digital-wallet-api/internal/auth/repository"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
-	"github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
+	walletEntity "github.com/Mpayy/digital-wallet-api/internal/wallet/entity"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
+
+//go:generate mockery
+//mockery:generate: true
+//mockery:filename: ../mocks/mock_wallet_provisioner.go
+type WalletProvisioner interface {
+	CreateWallet(ctx context.Context, userID uint) (*walletEntity.Wallet, error)
+}
 
 type AuthUsecase interface {
 	Register(ctx context.Context, request dto.RegisterRequest) (*dto.RegisterResponse, error)
@@ -25,15 +31,15 @@ type AuthUsecase interface {
 }
 
 type authUsecaseImpl struct {
-	AuthRepo      authRepo.AuthRepository
-	AuthRedisRepo authRepo.AuthRedisRepository
-	WalletUsecase usecase.WalletUsecase
-	JwtToken      jwt.JwtToken
-	Log           *logrus.Logger
+	AuthRepo          authRepo.AuthRepository
+	AuthRedisRepo     authRepo.AuthRedisRepository
+	WalletProvisioner WalletProvisioner
+	JwtToken          jwt.JwtToken
+	Log               *logrus.Logger
 }
 
-func NewAuthUsecase(authRepo authRepo.AuthRepository, authRedisRepo authRepo.AuthRedisRepository, walletUsecase usecase.WalletUsecase, jwtToken jwt.JwtToken, log *logrus.Logger) AuthUsecase {
-	return &authUsecaseImpl{AuthRepo: authRepo, AuthRedisRepo: authRedisRepo, WalletUsecase: walletUsecase, JwtToken: jwtToken, Log: log}
+func NewAuthUsecase(authRepo authRepo.AuthRepository, authRedisRepo authRepo.AuthRedisRepository, walletProvisioner WalletProvisioner, jwtToken jwt.JwtToken, log *logrus.Logger) AuthUsecase {
+	return &authUsecaseImpl{AuthRepo: authRepo, AuthRedisRepo: authRedisRepo, WalletProvisioner: walletProvisioner, JwtToken: jwtToken, Log: log}
 }
 
 func (u *authUsecaseImpl) Register(ctx context.Context, request dto.RegisterRequest) (*dto.RegisterResponse, error) {
@@ -45,7 +51,7 @@ func (u *authUsecaseImpl) Register(ctx context.Context, request dto.RegisterRequ
 		return nil, fmt.Errorf("hash password: %w: %w", apperror.ErrInternalServer, err)
 	}
 
-	user := &authEntity.User{
+	user := &entity.User{
 		Name:     request.Name,
 		Email:    request.Email,
 		Password: string(hashPassword),
@@ -59,7 +65,7 @@ func (u *authUsecaseImpl) Register(ctx context.Context, request dto.RegisterRequ
 		return nil, fmt.Errorf("create user: %w", err)
 	}
 
-	_, err = u.WalletUsecase.CreateWallet(ctx, user.ID)
+	_, err = u.WalletProvisioner.CreateWallet(ctx, user.ID)
 	if err != nil {
 		logger.WithError(err).Error("failed to provision wallet during registration — will self-heal on first wallet access")
 	}
