@@ -33,6 +33,7 @@ var walletSet = wire.NewSet(
 	walletUsecase.NewWalletUsecase,
 	walletHandler.NewWalletHandler,
 	wire.Bind(new(paymentUsecase.WalletTopUpper), new(walletUsecase.WalletUsecase)),
+	wire.Bind(new(authUsecase.WalletProvisioner), new(walletUsecase.WalletUsecase)),
 )
 
 var transactionSet = wire.NewSet(

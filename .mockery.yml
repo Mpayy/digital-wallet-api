@@ -3,6 +3,7 @@ pkgname: "mocks"
 
 packages:
   github.com/Mpayy/digital-wallet-api/internal/auth/repository:
+  github.com/Mpayy/digital-wallet-api/internal/auth/usecase:
   github.com/Mpayy/digital-wallet-api/internal/pkg/jwt:
   github.com/Mpayy/digital-wallet-api/internal/wallet/repository:
   github.com/Mpayy/digital-wallet-api/internal/wallet/usecase:
