@@ -49,7 +49,13 @@ func (h *paymentHandlerImpl) CreateTopUpCheckout(ctx *gin.Context) {
 		return
 	}
 
-	checkout, err := h.paymentUsecase.CreateTopUpCheckout(ctx.Request.Context(), auth.ID, request.Amount)
+	idemKey := ctx.GetHeader("Idempotency-Key")
+	if idemKey == "" {
+		response.Handle(ctx, apperror.ErrMissingIdempotencyKey)
+		return
+	}
+
+	checkout, err := h.paymentUsecase.CreateTopUpCheckout(ctx.Request.Context(), auth.ID, request.Amount, idemKey)
 	if err != nil {
 		response.Handle(ctx, err)
 		return

@@ -44,6 +44,7 @@ var transactionSet = wire.NewSet(
 var idempotencySet = wire.NewSet(
 	walletRepo.NewIdempotencyRepository,
 	walletUsecase.NewIdempotencyService,
+	wire.Bind(new(paymentUsecase.IdempotencyClaimer), new(walletUsecase.IdempotencyService)),
 )
 
 var transferSet = wire.NewSet(

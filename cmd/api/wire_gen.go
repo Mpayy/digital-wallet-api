@@ -56,7 +56,7 @@ func InitializeAPI() *Application {
 	jwtMiddleware := middleware.NewJwtMiddleware(jwtToken, authRedisRepository, logger)
 	paymentRepository := repository3.NewPaymentRepository(db)
 	paymentCollector := gateway.NewMidtransGateway(viper)
-	paymentUsecase := usecase3.NewPaymentUsecase(paymentRepository, paymentCollector, walletUsecase, logger)
+	paymentUsecase := usecase3.NewPaymentUsecase(paymentRepository, paymentCollector, walletUsecase, idempotencyService, logger)
 	paymentHandler := handler2.NewPaymentHandler(paymentUsecase, validate)
 	webhookHandler := handler2.NewWebhookHandler(paymentUsecase)
 	router := NewRouter(engine, logger, authHandler, walletHandler, transactionHandler, jwtMiddleware, paymentHandler, webhookHandler)
@@ -72,7 +72,7 @@ var walletSet = wire.NewSet(repository2.NewWalletRepository, usecase.NewWalletUs
 
 var transactionSet = wire.NewSet(repository2.NewTransactionRepository, usecase.NewTransactionUsecase, handler.NewTransactionHandler)
 
-var idempotencySet = wire.NewSet(repository2.NewIdempotencyRepository, usecase.NewIdempotencyService)
+var idempotencySet = wire.NewSet(repository2.NewIdempotencyRepository, usecase.NewIdempotencyService, wire.Bind(new(usecase3.IdempotencyClaimer), new(usecase.IdempotencyService)))
 
 var transferSet = wire.NewSet(repository2.NewTransferRepository, usecase.NewTransferUsecase)
 

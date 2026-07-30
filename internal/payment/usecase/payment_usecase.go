@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -16,50 +17,82 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type IdempotencyClaimer interface {
+	Claim(ctx context.Context, key string, userID uint, endpoint string, payload any) (claimed bool, cachedBody string, err error)
+	Complete(ctx context.Context, key string, response any) error
+	MarkFailed(ctx context.Context, key string) error
+}
+
 type WalletTopUpper interface {
 	TopUp(ctx context.Context, userID uint, req walletdto.TopUpRequest, idemKey string) (*walletdto.TopUpResponse, error)
 }
 
 type PaymentUsecase interface {
-	CreateTopUpCheckout(ctx context.Context, userID uint, amount int64) (*dto.CheckoutResponse, error)
+	CreateTopUpCheckout(ctx context.Context, userID uint, amount int64, idemKey string) (*dto.CheckoutResponse, error)
 	HandleWebhook(ctx context.Context, payload []byte) error
 }
 
 type paymentUsecaseImpl struct {
-	paymentRepo    repository.PaymentRepository
-	gateway        gateway.PaymentCollector
-	walletTopUpper WalletTopUpper
-	log            *logrus.Logger
+	paymentRepo        repository.PaymentRepository
+	gateway            gateway.PaymentCollector
+	walletTopUpper     WalletTopUpper
+	idempotencyClaimer IdempotencyClaimer
+	log                *logrus.Logger
 }
 
 func NewPaymentUsecase(
 	paymentRepo repository.PaymentRepository,
 	gateway gateway.PaymentCollector,
 	walletTopUpper WalletTopUpper,
+	idempotencyClaimer IdempotencyClaimer,
 	log *logrus.Logger,
 ) PaymentUsecase {
 	return &paymentUsecaseImpl{
-		paymentRepo:    paymentRepo,
-		gateway:        gateway,
-		walletTopUpper: walletTopUpper,
-		log:            log,
+		paymentRepo:        paymentRepo,
+		gateway:            gateway,
+		walletTopUpper:     walletTopUpper,
+		idempotencyClaimer: idempotencyClaimer,
+		log:                log,
 	}
 }
 
-func (p *paymentUsecaseImpl) CreateTopUpCheckout(ctx context.Context, userID uint, amount int64) (*dto.CheckoutResponse, error) {
+func (p *paymentUsecaseImpl) CreateTopUpCheckout(ctx context.Context, userID uint, amount int64, idemKey string) (*dto.CheckoutResponse, error) {
 	logger := p.log.WithFields(logrus.Fields{
 		"user_id": userID,
 		"amount":  amount,
 	})
 	logger.Debug("attempting to create top up checkout")
 
+	payload := dto.CheckoutRequest{
+		Amount: amount,
+	}
+
+	claimed, cachedBody, err := p.idempotencyClaimer.Claim(ctx, idemKey, userID, "TOPUP_CHECKOUT", payload)
+	if err != nil {
+		return nil, err
+	}
+
+	if !claimed {
+		var cached dto.CheckoutResponse
+		if err := json.Unmarshal([]byte(cachedBody), &cached); err != nil {
+			return nil, fmt.Errorf("unmarshal cached checkout response: %w", err)
+		}
+		logger.Info("checkout replayed from idempotency cache") // <- INI kuncinya: link Midtrans yang SAMA dibalikin lagi
+		return &cached, nil
+	}
+
 	orderID := uuid.NewString()
 	gatewayReq := gateway.ChargeRequest{
 		OrderID: orderID,
 		Amount:  amount,
 	}
+
 	result, err := p.gateway.CreateCharge(ctx, gatewayReq)
 	if err != nil {
+		markErr := p.idempotencyClaimer.MarkFailed(ctx, idemKey)
+		if markErr != nil {
+			logger.WithError(markErr).Error("failed to mark idempotency key as failed")
+		}
 		return nil, fmt.Errorf("create charge: %w", err)
 	}
 
@@ -70,18 +103,26 @@ func (p *paymentUsecaseImpl) CreateTopUpCheckout(ctx context.Context, userID uin
 
 	err = p.paymentRepo.Create(ctx, record)
 	if err != nil {
-		if errors.Is(err, apperror.ErrDuplicatedKey){
-			return nil, apperror.ErrDuplicatePaymentTransaction
+		markErr := p.idempotencyClaimer.MarkFailed(ctx, idemKey)
+		if markErr != nil {
+			logger.WithError(markErr).Error("failed to mark idempotency key as failed")
 		}
 		return nil, fmt.Errorf("save payment transaction: %w", err)
+	}
+
+	checkoutResponse := &dto.CheckoutResponse{
+		RedirectURL: result.RedirectURL,
+	}
+
+	err = p.idempotencyClaimer.Complete(ctx, idemKey, checkoutResponse)
+	if err != nil {
+		logger.WithError(err).Error("checkout created but failed to mark idempotency completed")
 	}
 
 	logger.WithFields(logrus.Fields{
 		"order_id": orderID,
 	}).Info("checkout created")
-	return &dto.CheckoutResponse{
-		RedirectURL: result.RedirectURL,
-	}, nil
+	return checkoutResponse, nil
 }
 
 func (p *paymentUsecaseImpl) HandleWebhook(ctx context.Context, payload []byte) error {
