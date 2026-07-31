@@ -45,6 +45,33 @@ definitions:
       name:
         type: string
     type: object
+  github_com_Mpayy_digital-wallet-api_internal_payment_dto.CheckoutRequest:
+    properties:
+      amount:
+        type: integer
+    required:
+    - amount
+    type: object
+  github_com_Mpayy_digital-wallet-api_internal_payment_dto.CheckoutResponse:
+    properties:
+      redirect_url:
+        type: string
+    type: object
+  github_com_Mpayy_digital-wallet-api_internal_payment_dto.MidtransWebhookPayload:
+    properties:
+      fraud_status:
+        type: string
+      gross_amount:
+        type: string
+      order_id:
+        type: string
+      signature_key:
+        type: string
+      status_code:
+        type: string
+      transaction_status:
+        type: string
+    type: object
   github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError:
     properties:
       code:
@@ -180,7 +207,6 @@ definitions:
       user_id:
         type: integer
     type: object
-host: localhost:8080
 info:
   contact: {}
   description: Digital wallet built with Go, Gin, GORM, and Redis.
@@ -597,6 +623,87 @@ paths:
       summary: Top up wallet balance
       tags:
       - wallet
+  /wallets/topup/checkout:
+    post:
+      consumes:
+      - application/json
+      description: Creates a Midtrans Snap payment session for the authenticated user.
+        Returns a redirect URL to complete payment; the wallet is credited asynchronously
+        once Midtrans confirms via webhook, not immediately in this response.
+      parameters:
+      - description: Client-generated UUID v4, unique per checkout attempt
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Checkout payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_payment_dto.CheckoutRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_payment_dto.CheckoutResponse'
+              type: object
+        "400":
+          description: BAD_REQUEST / VALIDATION_ERROR / MISSING_IDEMPOTENCY_KEY
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+              type: object
+        "401":
+          description: UNAUTHORIZED / INVALID_TOKEN / TOKEN_HAS_EXPIRED
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+              type: object
+        "409":
+          description: IDEMPOTENCY_KEY_CONFLICT / REQUEST_IN_PROGRESS
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+              type: object
+        "422":
+          description: PREVIOUS_ATTEMPT_FAILED
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+              type: object
+        "500":
+          description: INTERNAL_SERVER_ERROR
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Create a top-up checkout session
+      tags:
+      - payment
   /wallets/transfer:
     post:
       consumes:
@@ -687,6 +794,70 @@ paths:
       summary: Transfer balance to another user
       tags:
       - wallet
+  /webhooks/midtrans:
+    post:
+      consumes:
+      - application/json
+      description: Receives asynchronous payment status updates from Midtrans. NOT
+        intended to be called manually — Midtrans invokes this using a payload signed
+        with the Server Key. "Try it out" in this UI will always fail signature verification
+        since it requires a real Midtrans-signed request; documented here for completeness
+        only.
+      parameters:
+      - description: Midtrans notification payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_payment_dto.MidtransWebhookPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: WEBHOOK_PAYLOAD_TOO_LARGE
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+              type: object
+        "401":
+          description: INVALID_WEBHOOK_SIGNATURE
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+              type: object
+        "404":
+          description: RECORD_NOT_FOUND (provider_ref_id tidak dikenal)
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+              type: object
+        "500":
+          description: INTERNAL_SERVER_ERROR
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+              type: object
+      summary: Midtrans payment notification webhook
+      tags:
+      - payment
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.

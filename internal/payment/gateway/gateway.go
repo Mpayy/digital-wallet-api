@@ -2,6 +2,11 @@ package gateway
 
 import "context"
 
+const (
+	MidtransTestNotifPrefix1 = "payment_notif_test_"
+	MidtransTestNotifPrefix2 = "sample-"
+)
+
 type ChargeRequest struct {
 	OrderID string
 	Amount  int64
@@ -17,8 +22,10 @@ type WebhookEvent struct {
 	Status        string
 }
 
+//go:generate mockery
+//mockery:generate: true
+//mockery:filename: ../mocks/mock_payment_collector.go
 type PaymentCollector interface {
 	CreateCharge(ctx context.Context, req ChargeRequest) (*ChargeResult, error)
-	VerifyWebhookSignature(payload []byte) error
-	ParseWebhookPayload(payload []byte) (*WebhookEvent, error)
+	VerifyAndParseWebhook(payload []byte) (*WebhookEvent, error)
 }

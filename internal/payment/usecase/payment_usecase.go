@@ -17,12 +17,18 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+//go:generate mockery
+//mockery:generate: true
+//mockery:filename: ../mocks/mock_idempotency_claimer.go
 type IdempotencyClaimer interface {
 	Claim(ctx context.Context, key string, userID uint, endpoint string, payload any) (claimed bool, cachedBody string, err error)
 	Complete(ctx context.Context, key string, response any) error
 	MarkFailed(ctx context.Context, key string) error
 }
 
+//go:generate mockery
+//mockery:generate: true
+//mockery:filename: ../mocks/mock_wallet_top_upper.go
 type WalletTopUpper interface {
 	TopUp(ctx context.Context, userID uint, req walletdto.TopUpRequest, idemKey string) (*walletdto.TopUpResponse, error)
 }
@@ -62,6 +68,10 @@ func (p *paymentUsecaseImpl) CreateTopUpCheckout(ctx context.Context, userID uin
 		"amount":  amount,
 	})
 	logger.Debug("attempting to create top up checkout")
+
+	if amount <= 0 {
+		return nil, apperror.ErrInvalidAmount
+	}
 
 	payload := dto.CheckoutRequest{
 		Amount: amount,
@@ -107,6 +117,9 @@ func (p *paymentUsecaseImpl) CreateTopUpCheckout(ctx context.Context, userID uin
 		if markErr != nil {
 			logger.WithError(markErr).Error("failed to mark idempotency key as failed")
 		}
+		if errors.Is(err, apperror.ErrDuplicatedKey) {
+			return nil, apperror.ErrDuplicatePayment
+		}
 		return nil, fmt.Errorf("save payment transaction: %w", err)
 	}
 
@@ -126,14 +139,12 @@ func (p *paymentUsecaseImpl) CreateTopUpCheckout(ctx context.Context, userID uin
 }
 
 func (p *paymentUsecaseImpl) HandleWebhook(ctx context.Context, payload []byte) error {
-	err := p.gateway.VerifyWebhookSignature(payload)
+	event, err := p.gateway.VerifyAndParseWebhook(payload)
 	if err != nil {
 		p.log.WithError(err).Warn("webhook signature verification failed")
-		return apperror.ErrInvalidWebhookSignature
-	}
-
-	event, err := p.gateway.ParseWebhookPayload(payload)
-	if err != nil {
+		if errors.Is(err, apperror.ErrInvalidWebhookSignature) {
+			return err
+		}
 		return fmt.Errorf("parse webhook payload: %w", err)
 	}
 
@@ -143,15 +154,15 @@ func (p *paymentUsecaseImpl) HandleWebhook(ctx context.Context, payload []byte) 
 	}) // TANPA payload mentah — sama prinsipnya kayak yang kita benerin di IdempotencyService.Claim dulu
 	logger.Debug("processing webhook event")
 
-	record, err := p.paymentRepo.FindByProviderRefID(ctx, event.ProviderRefID)
+	record, err := p.paymentRepo.FindByProviderRefID(ctx, "MIDTRANS", event.ProviderRefID)
 	if err != nil {
 		if errors.Is(err, apperror.ErrRecordNotFound) {
-			if strings.HasPrefix(event.ProviderRefID, entity.MidtransTestNotifPrefix1) || strings.HasPrefix(event.ProviderRefID, entity.MidtransTestNotifPrefix2) {
+			if strings.HasPrefix(event.ProviderRefID, gateway.MidtransTestNotifPrefix1) || strings.HasPrefix(event.ProviderRefID, gateway.MidtransTestNotifPrefix2) {
 				logger.Debug("ignoring midtrans test notification")
 				return nil
 			}
 			logger.Warn("webhook references unknown payment transaction")
-			return apperror.ErrInvalidToken
+			return apperror.ErrRecordNotFound
 		}
 		return fmt.Errorf("find payment transaction: %w", err)
 	}
@@ -163,7 +174,7 @@ func (p *paymentUsecaseImpl) HandleWebhook(ctx context.Context, payload []byte) 
 
 	if event.Status != string(entity.PaymentTransactionStatusSettled) {
 		payloadStr := string(payload)
-		if err := p.paymentRepo.UpdateStatus(ctx, event.ProviderRefID, entity.PaymentTransactionStatus(event.Status), nil, &payloadStr); err != nil {
+		if err := p.paymentRepo.UpdateStatus(ctx, "MIDTRANS", event.ProviderRefID, entity.PaymentTransactionStatus(event.Status), nil, &payloadStr); err != nil {
 			return fmt.Errorf("update payment transaction status to %s: %w", event.Status, err)
 		}
 		logger.Info("payment did not settle")
@@ -181,7 +192,7 @@ func (p *paymentUsecaseImpl) HandleWebhook(ctx context.Context, payload []byte) 
 	}
 
 	payloadStr := string(payload)
-	err = p.paymentRepo.UpdateStatus(ctx, event.ProviderRefID, entity.PaymentTransactionStatusSettled, &topupResp.TransactionID, &payloadStr)
+	err = p.paymentRepo.UpdateStatus(ctx, "MIDTRANS", event.ProviderRefID, entity.PaymentTransactionStatusSettled, &topupResp.TransactionID, &payloadStr)
 	if err != nil {
 		return fmt.Errorf("update payment transaction status: %w", err)
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/Mpayy/digital-wallet-api/docs"
 	_ "github.com/Mpayy/digital-wallet-api/docs"
 	authHandler "github.com/Mpayy/digital-wallet-api/internal/auth/handler"
 	jwtMiddleware "github.com/Mpayy/digital-wallet-api/internal/auth/middleware"
@@ -47,7 +48,11 @@ func NewRouter(
 }
 
 func (r *Router) Setup() {
-	r.App.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.App.GET("/swagger/*any", func(ctx *gin.Context) {
+		docs.SwaggerInfo.Host = ctx.Request.Host
+		ginSwagger.WrapHandler(swaggerFiles.Handler)(ctx)
+	})
+	
 	v1 := r.App.Group("/api/v1")
 	v1.Use(loggerMiddleware.LoggerMiddleware(r.Log))
 	v1.POST("/webhooks/midtrans", r.WebhookHandler.MidtransNotification)
