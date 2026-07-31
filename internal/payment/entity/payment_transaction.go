@@ -11,11 +11,6 @@ const (
 	PaymentTransactionStatusExpired PaymentTransactionStatus = "EXPIRED"
 )
 
-const (
-	MidtransTestNotifPrefix1 = "payment_notif_test_"
-	MidtransTestNotifPrefix2 = "sample-"
-)
-
 type PaymentTransaction struct {
 	ID                  uint                     `gorm:"column:id;primaryKey"`
 	Provider            string                   `gorm:"column:provider;type:varchar(20);not null;uniqueIndex:uq_payment_provider_ref"`

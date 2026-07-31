@@ -9,10 +9,13 @@ import (
 	"gorm.io/gorm"
 )
 
+//go:generate mockery
+//mockery:generate: true
+//mockery:filename: ../mocks/mock_payment_repository.go
 type PaymentRepository interface {
 	Create(ctx context.Context, payment *entity.PaymentTransaction) error
-	FindByProviderRefID(ctx context.Context, providerRefID string) (*entity.PaymentTransaction, error)
-	UpdateStatus(ctx context.Context, providerRefID string, status entity.PaymentTransactionStatus, walletTransactionID *uint, rawNotification *string) error
+	FindByProviderRefID(ctx context.Context, provider, providerRefID string) (*entity.PaymentTransaction, error)
+	UpdateStatus(ctx context.Context, provider, providerRefID string, status entity.PaymentTransactionStatus, walletTransactionID *uint, rawNotification *string) error
 }
 
 type paymentRepositoryImpl struct {
@@ -34,9 +37,9 @@ func (r *paymentRepositoryImpl) Create(ctx context.Context, payment *entity.Paym
 	return nil
 }
 
-func (r *paymentRepositoryImpl) FindByProviderRefID(ctx context.Context, providerRefID string) (*entity.PaymentTransaction, error) {
+func (r *paymentRepositoryImpl) FindByProviderRefID(ctx context.Context, provider, providerRefID string) (*entity.PaymentTransaction, error) {
 	var payment entity.PaymentTransaction
-	err := r.db.WithContext(ctx).Where("provider_ref_id = ?", providerRefID).First(&payment).Error
+	err := r.db.WithContext(ctx).Where("provider = ? AND provider_ref_id = ?", provider, providerRefID).First(&payment).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperror.ErrRecordNotFound
@@ -46,10 +49,10 @@ func (r *paymentRepositoryImpl) FindByProviderRefID(ctx context.Context, provide
 	return &payment, nil
 }
 
-func (r *paymentRepositoryImpl) UpdateStatus(ctx context.Context, providerRefID string, status entity.PaymentTransactionStatus, walletTransactionID *uint, rawNotification *string) error {
+func (r *paymentRepositoryImpl) UpdateStatus(ctx context.Context, provider, providerRefID string, status entity.PaymentTransactionStatus, walletTransactionID *uint, rawNotification *string) error {
 	err := r.db.WithContext(ctx).
 		Model(&entity.PaymentTransaction{}).
-		Where("provider_ref_id = ?", providerRefID).
+		Where("provider = ? AND provider_ref_id = ?", provider, providerRefID).
 		Updates(map[string]any{
 			"status":                status,
 			"wallet_transaction_id": walletTransactionID,

@@ -9,6 +9,7 @@ import (
 
 	"github.com/Mpayy/digital-wallet-api/internal/payment/dto"
 	"github.com/Mpayy/digital-wallet-api/internal/payment/entity"
+	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
 	"github.com/midtrans/midtrans-go"
 	"github.com/midtrans/midtrans-go/snap"
 	"github.com/spf13/viper"
@@ -52,11 +53,11 @@ func (m *midtransGateway) CreateCharge(ctx context.Context, req ChargeRequest) (
 	}, nil
 }
 
-func (m *midtransGateway) VerifyWebhookSignature(payload []byte) error {
+func (m *midtransGateway) VerifyAndParseWebhook(payload []byte) (*WebhookEvent, error) {
 	var notif dto.MidtransWebhookPayload
 	err := json.Unmarshal(payload, &notif)
 	if err != nil {
-		return fmt.Errorf("unmarshal webhook payload: %w", err)
+		return nil, fmt.Errorf("unmarshal webhook payload: %w", err)
 	}
 
 	// Rumus Resmi Midtrans: SHA512(order_id + status_code + gross_amount + ServerKey)
@@ -67,17 +68,7 @@ func (m *midtransGateway) VerifyWebhookSignature(payload []byte) error {
 	generatedSignature := hex.EncodeToString(hash.Sum(nil))
 
 	if generatedSignature != notif.SignatureKey {
-		return fmt.Errorf("signature key mismatch")
-	}
-
-	return nil
-}
-
-func (m *midtransGateway) ParseWebhookPayload(payload []byte) (*WebhookEvent, error) {
-	var notif dto.MidtransWebhookPayload
-	err := json.Unmarshal(payload, &notif)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal webhook payload: %w", err)
+		return nil, apperror.ErrInvalidWebhookSignature
 	}
 
 	var normalizedStatus string
