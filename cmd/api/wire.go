@@ -32,8 +32,9 @@ var walletSet = wire.NewSet(
 	walletRepo.NewWalletRepository,
 	walletUsecase.NewWalletUsecase,
 	walletHandler.NewWalletHandler,
-	wire.Bind(new(paymentUsecase.WalletTopUpper), new(walletUsecase.WalletUsecase)),
 	wire.Bind(new(authUsecase.WalletProvisioner), new(walletUsecase.WalletUsecase)),
+	wire.Bind(new(paymentUsecase.WalletTopUpper), new(walletUsecase.WalletUsecase)),
+	wire.Bind(new(paymentUsecase.WalletWithdrawer), new(walletUsecase.WalletUsecase)),
 )
 
 var transactionSet = wire.NewSet(
@@ -58,7 +59,10 @@ var paymentSet = wire.NewSet(
 	paymentUsecase.NewPaymentUsecase,
 	paymentHandler.NewPaymentHandler,
 	paymentHandler.NewWebhookHandler,
+	paymentUsecase.NewWithdrawalUsecase,
+	paymentHandler.NewWithdrawalHandler,
 	gateway.NewMidtransGateway,
+	gateway.NewXenditGateway,
 )
 
 var middlewareSet = wire.NewSet(

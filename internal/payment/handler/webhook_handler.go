@@ -14,14 +14,16 @@ import (
 
 type WebhookHandler interface {
 	MidtransNotification(ctx *gin.Context)
+	XenditNotification(ctx *gin.Context)
 }
 
 type webhookHandlerImpl struct {
-	webhookUsecase usecase.PaymentUsecase
+	paymentUsecase    usecase.PaymentUsecase
+	withdrawalUsecase usecase.WithdrawalUsecase
 }
 
-func NewWebhookHandler(webhookUsecase usecase.PaymentUsecase) WebhookHandler {
-	return &webhookHandlerImpl{webhookUsecase: webhookUsecase}
+func NewWebhookHandler(paymentUsecase usecase.PaymentUsecase, withdrawalUsecase usecase.WithdrawalUsecase) WebhookHandler {
+	return &webhookHandlerImpl{paymentUsecase: paymentUsecase, withdrawalUsecase: withdrawalUsecase}
 }
 
 // MidtransNotification godoc
@@ -56,8 +58,29 @@ func (h *webhookHandlerImpl) MidtransNotification(ctx *gin.Context) {
 		return
 	}
 
-	err = h.webhookUsecase.HandleWebhook(ctx.Request.Context(), rawPayload)
+	err = h.paymentUsecase.HandleWebhook(ctx.Request.Context(), rawPayload)
 	if err != nil {
+		response.Handle(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+func (h *webhookHandlerImpl) XenditNotification(ctx *gin.Context) {
+	ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, 1*1024*1024)
+	payload, err := ctx.GetRawData()
+	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			response.Handle(ctx, apperror.ErrWebhookPayloadTooLarge)
+			return
+		}
+		response.Handle(ctx, apperror.ErrBadRequest)
+		return
+	}
+
+	if err := h.withdrawalUsecase.HandlePayoutWebhook(ctx.Request.Context(), payload, ctx.Request.Header); err != nil {
 		response.Handle(ctx, err)
 		return
 	}

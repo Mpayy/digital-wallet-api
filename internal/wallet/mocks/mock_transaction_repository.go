@@ -244,3 +244,66 @@ func (_c *MockTransactionRepository_FindByWalletID_Call) RunAndReturn(run func(c
 	_c.Call.Return(run)
 	return _c
 }
+
+// UpdateStatus provides a mock function for the type MockTransactionRepository
+func (_mock *MockTransactionRepository) UpdateStatus(tx *gorm.DB, transactionID uint, newStatus entity.TransactionStatus) error {
+	ret := _mock.Called(tx, transactionID, newStatus)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateStatus")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*gorm.DB, uint, entity.TransactionStatus) error); ok {
+		r0 = returnFunc(tx, transactionID, newStatus)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTransactionRepository_UpdateStatus_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateStatus'
+type MockTransactionRepository_UpdateStatus_Call struct {
+	*mock.Call
+}
+
+// UpdateStatus is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - transactionID uint
+//   - newStatus entity.TransactionStatus
+func (_e *MockTransactionRepository_Expecter) UpdateStatus(tx any, transactionID any, newStatus any) *MockTransactionRepository_UpdateStatus_Call {
+	return &MockTransactionRepository_UpdateStatus_Call{Call: _e.mock.On("UpdateStatus", tx, transactionID, newStatus)}
+}
+
+func (_c *MockTransactionRepository_UpdateStatus_Call) Run(run func(tx *gorm.DB, transactionID uint, newStatus entity.TransactionStatus)) *MockTransactionRepository_UpdateStatus_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *gorm.DB
+		if args[0] != nil {
+			arg0 = args[0].(*gorm.DB)
+		}
+		var arg1 uint
+		if args[1] != nil {
+			arg1 = args[1].(uint)
+		}
+		var arg2 entity.TransactionStatus
+		if args[2] != nil {
+			arg2 = args[2].(entity.TransactionStatus)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTransactionRepository_UpdateStatus_Call) Return(err error) *MockTransactionRepository_UpdateStatus_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTransactionRepository_UpdateStatus_Call) RunAndReturn(run func(tx *gorm.DB, transactionID uint, newStatus entity.TransactionStatus) error) *MockTransactionRepository_UpdateStatus_Call {
+	_c.Call.Return(run)
+	return _c
+}

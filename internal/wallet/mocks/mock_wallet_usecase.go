@@ -107,6 +107,63 @@ func (_c *MockWalletUsecase_CreateWallet_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// FinalizeWithdrawal provides a mock function for the type MockWalletUsecase
+func (_mock *MockWalletUsecase) FinalizeWithdrawal(ctx context.Context, transactionID uint) error {
+	ret := _mock.Called(ctx, transactionID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FinalizeWithdrawal")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint) error); ok {
+		r0 = returnFunc(ctx, transactionID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockWalletUsecase_FinalizeWithdrawal_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FinalizeWithdrawal'
+type MockWalletUsecase_FinalizeWithdrawal_Call struct {
+	*mock.Call
+}
+
+// FinalizeWithdrawal is a helper method to define mock.On call
+//   - ctx context.Context
+//   - transactionID uint
+func (_e *MockWalletUsecase_Expecter) FinalizeWithdrawal(ctx any, transactionID any) *MockWalletUsecase_FinalizeWithdrawal_Call {
+	return &MockWalletUsecase_FinalizeWithdrawal_Call{Call: _e.mock.On("FinalizeWithdrawal", ctx, transactionID)}
+}
+
+func (_c *MockWalletUsecase_FinalizeWithdrawal_Call) Run(run func(ctx context.Context, transactionID uint)) *MockWalletUsecase_FinalizeWithdrawal_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint
+		if args[1] != nil {
+			arg1 = args[1].(uint)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockWalletUsecase_FinalizeWithdrawal_Call) Return(err error) *MockWalletUsecase_FinalizeWithdrawal_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockWalletUsecase_FinalizeWithdrawal_Call) RunAndReturn(run func(ctx context.Context, transactionID uint) error) *MockWalletUsecase_FinalizeWithdrawal_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetWalletByUserID provides a mock function for the type MockWalletUsecase
 func (_mock *MockWalletUsecase) GetWalletByUserID(ctx context.Context, userID uint) (*dto.WalletResponse, error) {
 	ret := _mock.Called(ctx, userID)
@@ -171,6 +228,69 @@ func (_c *MockWalletUsecase_GetWalletByUserID_Call) Return(walletResponse *dto.W
 }
 
 func (_c *MockWalletUsecase_GetWalletByUserID_Call) RunAndReturn(run func(ctx context.Context, userID uint) (*dto.WalletResponse, error)) *MockWalletUsecase_GetWalletByUserID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReverseWithdrawal provides a mock function for the type MockWalletUsecase
+func (_mock *MockWalletUsecase) ReverseWithdrawal(ctx context.Context, transactionID uint, reason string) error {
+	ret := _mock.Called(ctx, transactionID, reason)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReverseWithdrawal")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint, string) error); ok {
+		r0 = returnFunc(ctx, transactionID, reason)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockWalletUsecase_ReverseWithdrawal_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReverseWithdrawal'
+type MockWalletUsecase_ReverseWithdrawal_Call struct {
+	*mock.Call
+}
+
+// ReverseWithdrawal is a helper method to define mock.On call
+//   - ctx context.Context
+//   - transactionID uint
+//   - reason string
+func (_e *MockWalletUsecase_Expecter) ReverseWithdrawal(ctx any, transactionID any, reason any) *MockWalletUsecase_ReverseWithdrawal_Call {
+	return &MockWalletUsecase_ReverseWithdrawal_Call{Call: _e.mock.On("ReverseWithdrawal", ctx, transactionID, reason)}
+}
+
+func (_c *MockWalletUsecase_ReverseWithdrawal_Call) Run(run func(ctx context.Context, transactionID uint, reason string)) *MockWalletUsecase_ReverseWithdrawal_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint
+		if args[1] != nil {
+			arg1 = args[1].(uint)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockWalletUsecase_ReverseWithdrawal_Call) Return(err error) *MockWalletUsecase_ReverseWithdrawal_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockWalletUsecase_ReverseWithdrawal_Call) RunAndReturn(run func(ctx context.Context, transactionID uint, reason string) error) *MockWalletUsecase_ReverseWithdrawal_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -251,6 +371,86 @@ func (_c *MockWalletUsecase_TopUp_Call) Return(topUpResponse *dto.TopUpResponse,
 }
 
 func (_c *MockWalletUsecase_TopUp_Call) RunAndReturn(run func(ctx context.Context, userID uint, req dto.TopUpRequest, idemKey string) (*dto.TopUpResponse, error)) *MockWalletUsecase_TopUp_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Withdraw provides a mock function for the type MockWalletUsecase
+func (_mock *MockWalletUsecase) Withdraw(ctx context.Context, userID uint, amount int64, idemKey string) (*dto.WithdrawResponse, error) {
+	ret := _mock.Called(ctx, userID, amount, idemKey)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Withdraw")
+	}
+
+	var r0 *dto.WithdrawResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint, int64, string) (*dto.WithdrawResponse, error)); ok {
+		return returnFunc(ctx, userID, amount, idemKey)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint, int64, string) *dto.WithdrawResponse); ok {
+		r0 = returnFunc(ctx, userID, amount, idemKey)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*dto.WithdrawResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint, int64, string) error); ok {
+		r1 = returnFunc(ctx, userID, amount, idemKey)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockWalletUsecase_Withdraw_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Withdraw'
+type MockWalletUsecase_Withdraw_Call struct {
+	*mock.Call
+}
+
+// Withdraw is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID uint
+//   - amount int64
+//   - idemKey string
+func (_e *MockWalletUsecase_Expecter) Withdraw(ctx any, userID any, amount any, idemKey any) *MockWalletUsecase_Withdraw_Call {
+	return &MockWalletUsecase_Withdraw_Call{Call: _e.mock.On("Withdraw", ctx, userID, amount, idemKey)}
+}
+
+func (_c *MockWalletUsecase_Withdraw_Call) Run(run func(ctx context.Context, userID uint, amount int64, idemKey string)) *MockWalletUsecase_Withdraw_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint
+		if args[1] != nil {
+			arg1 = args[1].(uint)
+		}
+		var arg2 int64
+		if args[2] != nil {
+			arg2 = args[2].(int64)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockWalletUsecase_Withdraw_Call) Return(withdrawResponse *dto.WithdrawResponse, err error) *MockWalletUsecase_Withdraw_Call {
+	_c.Call.Return(withdrawResponse, err)
+	return _c
+}
+
+func (_c *MockWalletUsecase_Withdraw_Call) RunAndReturn(run func(ctx context.Context, userID uint, amount int64, idemKey string) (*dto.WithdrawResponse, error)) *MockWalletUsecase_Withdraw_Call {
 	_c.Call.Return(run)
 	return _c
 }

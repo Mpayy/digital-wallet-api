@@ -17,6 +17,7 @@ type TransactionRepository interface {
 	Create(tx *gorm.DB, transaction *entity.Transaction) error
 	FindByID(ctx context.Context, id uint) (*entity.Transaction, error)
 	FindByWalletID(ctx context.Context, walletID uint, filter dto.TransactionFilter) ([]entity.Transaction, int64, error)
+	UpdateStatus(tx *gorm.DB, transactionID uint, newStatus entity.TransactionStatus) error
 }
 
 type transactionRepositoryImpl struct {
@@ -87,4 +88,20 @@ func (r *transactionRepositoryImpl) FindByWalletID(ctx context.Context, walletID
 	}
 
 	return result, total, nil
+}
+
+func (r *transactionRepositoryImpl) UpdateStatus(tx *gorm.DB, transactionID uint, newStatus entity.TransactionStatus) error {
+	result := tx.Model(&entity.Transaction{}).
+		Where("id = ? AND status = ?", transactionID, entity.TxStatusPending).
+		Update("status", newStatus)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return apperror.ErrRecordNotFound
+	}
+
+	return nil
 }

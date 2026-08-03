@@ -22,6 +22,7 @@ type Router struct {
 	TransactionHandler walletHandler.TransactionHandler
 	JwtMiddleware      *jwtMiddleware.JwtMiddleware
 	PaymentHandler     paymentHandler.PaymentHandler
+	WithdrawalHandler  paymentHandler.WithdrawalHandler
 	WebhookHandler     paymentHandler.WebhookHandler
 }
 
@@ -33,6 +34,7 @@ func NewRouter(
 	transactionHandler walletHandler.TransactionHandler,
 	jwtMiddleware *jwtMiddleware.JwtMiddleware,
 	paymentHandler paymentHandler.PaymentHandler,
+	withdrawalHandler paymentHandler.WithdrawalHandler,
 	webhookHandler paymentHandler.WebhookHandler,
 ) *Router {
 	return &Router{
@@ -43,6 +45,7 @@ func NewRouter(
 		TransactionHandler: transactionHandler,
 		JwtMiddleware:      jwtMiddleware,
 		PaymentHandler:     paymentHandler,
+		WithdrawalHandler:  withdrawalHandler,
 		WebhookHandler:     webhookHandler,
 	}
 }
@@ -52,10 +55,11 @@ func (r *Router) Setup() {
 		docs.SwaggerInfo.Host = ctx.Request.Host
 		ginSwagger.WrapHandler(swaggerFiles.Handler)(ctx)
 	})
-	
+
 	v1 := r.App.Group("/api/v1")
 	v1.Use(loggerMiddleware.LoggerMiddleware(r.Log))
 	v1.POST("/webhooks/midtrans", r.WebhookHandler.MidtransNotification)
+	v1.POST("/webhooks/xendit", r.WebhookHandler.XenditNotification)
 	{
 		auth := v1.Group("/auth")
 		auth.POST("/register", r.AuthHandler.Register)
@@ -67,6 +71,7 @@ func (r *Router) Setup() {
 		wallets.POST("/topup", r.WalletHandler.TopUp)
 		wallets.POST("/transfer", r.WalletHandler.Transfer)
 		wallets.POST("/topup/checkout", r.PaymentHandler.CreateTopUpCheckout)
+		wallets.POST("/withdraw", r.WithdrawalHandler.CreateWithdrawal)
 
 		transactions := v1.Group("/transactions", r.JwtMiddleware.AuthMiddleware())
 		transactions.GET("", r.TransactionHandler.ListTransactions)
