@@ -107,8 +107,12 @@ func (p *paymentUsecaseImpl) CreateTopUpCheckout(ctx context.Context, userID uin
 	}
 
 	record := &entity.PaymentTransaction{
-		Provider: "MIDTRANS", ProviderRefID: orderID, UserID: userID,
-		Amount: amount, Status: entity.PaymentTransactionStatusPending,
+		Provider:      "MIDTRANS",
+		ProviderRefID: orderID,
+		UserID:        userID,
+		Type:          "TOPUP",
+		Amount:        amount,
+		Status:        entity.PaymentTransactionStatusPending,
 	}
 
 	err = p.paymentRepo.Create(ctx, record)

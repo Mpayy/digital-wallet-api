@@ -3,6 +3,7 @@ CREATE TABLE payment_transactions (
     provider VARCHAR(20) NOT NULL,              -- "MIDTRANS"
     provider_ref_id VARCHAR(100) NOT NULL,      -- order_id yang kamu generate & kirim ke Midtrans
     user_id BIGINT UNSIGNED NOT NULL,           -- no FK, sama kayak wallets.user_id
+    type VARCHAR(20) NOT NULL,                  -- TOPUP, WITHDRAWAL
     amount BIGINT NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING', -- PENDING | SETTLED | FAILED | EXPIRED
     wallet_transaction_id BIGINT UNSIGNED NULL,    -- diisi SETELAH TopUp sukses, no FK

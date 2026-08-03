@@ -21,6 +21,9 @@ type WalletUsecase interface {
 	CreateWallet(ctx context.Context, userID uint) (*entity.Wallet, error)
 	GetWalletByUserID(ctx context.Context, userID uint) (*dto.WalletResponse, error)
 	TopUp(ctx context.Context, userID uint, req dto.TopUpRequest, idemKey string) (*dto.TopUpResponse, error)
+	Withdraw(ctx context.Context, userID uint, amount int64, idemKey string) (*dto.WithdrawResponse, error)
+	ReverseWithdrawal(ctx context.Context, transactionID uint, reason string) error
+	FinalizeWithdrawal(ctx context.Context, transactionID uint) error
 }
 
 type walletUsecaseImpl struct {
@@ -190,4 +193,189 @@ func (u *walletUsecaseImpl) TopUp(ctx context.Context, userID uint, request dto.
 
 	logger.Info("top up wallet: completed successfully")
 	return result, nil
+}
+
+func (u *walletUsecaseImpl) Withdraw(ctx context.Context, userID uint, amount int64, idemKey string) (*dto.WithdrawResponse, error) {
+	logger := u.log.WithFields(logrus.Fields{
+		"user_id": userID,
+		"amount":  amount,
+		"idemKey": idemKey,
+	})
+	logger.Debug("attempting withdrawal")
+
+	if amount <= 0 {
+		return nil, apperror.ErrInvalidAmount
+	}
+
+	wallet, err := u.walletRepo.FindByUserID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, apperror.ErrRecordNotFound) {
+			return nil, apperror.ErrWalletNotFound
+		}
+		return nil, fmt.Errorf("find wallet: %w", err)
+	}
+
+	claimed, cachedBody, err := u.idemService.Claim(ctx, idemKey, userID, "WITHDRAWAL", dto.WithdrawClaimPayload{Amount: amount})
+	if err != nil {
+		return nil, err
+	}
+	if !claimed {
+		var cached dto.WithdrawResponse
+		if err := json.Unmarshal([]byte(cachedBody), &cached); err != nil {
+			return nil, fmt.Errorf("unmarshal cached withdraw response: %w", err)
+		}
+		return &cached, nil
+	}
+
+	var result *dto.WithdrawResponse
+	txErr := u.walletRepo.WithTx(ctx, func(tx *gorm.DB) error {
+		locked, err := u.walletRepo.LockByID(tx, wallet.ID)
+		if err != nil {
+			if errors.Is(err, apperror.ErrRecordNotFound) {
+				return apperror.ErrWalletNotFound
+			}
+			return fmt.Errorf("lock wallet: %w", err)
+		}
+
+		if locked.Balance < amount {
+			return apperror.ErrInsufficientBalance
+		}
+
+		before := locked.Balance
+		locked.Balance -= amount
+
+		err = u.walletRepo.Save(tx, locked)
+		if err != nil {
+			return fmt.Errorf("save wallet: %w", err)
+		}
+
+		transaction := &entity.Transaction{
+			WalletID:      locked.ID,
+			Type:          entity.TxTypeWithdrawal,
+			Amount:        amount,
+			BalanceBefore: before,
+			BalanceAfter:  locked.Balance,
+			Status:        entity.TxStatusPending, // <- BEDA dari TopUp/Transfer: bukan langsung SUCCESS
+		}
+
+		err = u.transactionRepo.Create(tx, transaction)
+		if err != nil {
+			return fmt.Errorf("create transaction: %w", err)
+		}
+
+		result = &dto.WithdrawResponse{
+			TransactionID: transaction.ID,
+			WalletID:      transaction.WalletID,
+			Type:          string(transaction.Type),
+			Amount:        transaction.Amount,
+			BalanceBefore: transaction.BalanceBefore,
+			BalanceAfter:  transaction.BalanceAfter,
+			Status:        string(transaction.Status),
+			CreatedAt:     transaction.CreatedAt,
+		}
+		return nil
+
+	})
+
+	if txErr != nil {
+		u.idemService.MarkFailed(ctx, idemKey)
+		return nil, txErr
+	}
+
+	err = u.idemService.Complete(ctx, idemKey, result)
+	if err != nil {
+		u.log.WithError(err).Error("withdrawal debited but failed to mark idempotency completed")
+	}
+
+	logger.WithFields(logrus.Fields{
+		"transaction_id": result.TransactionID,
+	}).Info("wallet debited for withdrawal, pending gateway confirmation")
+
+	return result, nil
+}
+
+func (u *walletUsecaseImpl) ReverseWithdrawal(ctx context.Context, transactionID uint, reason string) error {
+	logger := u.log.WithFields(logrus.Fields{
+		"transaction_id": transactionID,
+		"reason":         reason,
+	})
+	logger.Debug("attempting to reverse withdrawal")
+
+	transaction, err := u.transactionRepo.FindByID(ctx, transactionID)
+	if err != nil {
+		if errors.Is(err, apperror.ErrRecordNotFound) {
+			return apperror.ErrTransactionNotFound
+		}
+		return fmt.Errorf("find transaction: %w", err)
+	}
+
+	if transaction.Type != entity.TxTypeWithdrawal {
+		return apperror.ErrInvalidTransactionType
+	}
+
+	if transaction.Status != entity.TxStatusPending {
+		return apperror.ErrTransactionAlreadyReversed
+	}
+
+	if transaction.Amount <= 0 {
+		return apperror.ErrInvalidAmount
+	}
+
+	txErr := u.walletRepo.WithTx(ctx, func(tx *gorm.DB) error {
+		err = u.transactionRepo.UpdateStatus(tx, transactionID, entity.TxStatusFailed)
+		if err != nil {
+			if errors.Is(err, apperror.ErrRecordNotFound) {
+				return apperror.ErrTransactionAlreadyReversed
+			}
+			return fmt.Errorf("update transaction: %w", err)
+		}
+
+		locked, err := u.walletRepo.LockByID(tx, transaction.WalletID)
+		if err != nil {
+			if errors.Is(err, apperror.ErrRecordNotFound) {
+				return apperror.ErrWalletNotFound
+			}
+			return fmt.Errorf("lock wallet: %w", err)
+		}
+
+		locked.Balance += transaction.Amount
+
+		err = u.walletRepo.Save(tx, locked)
+		if err != nil {
+			return fmt.Errorf("save wallet: %w", err)
+		}
+
+		return nil
+	})
+
+	if txErr != nil {
+		return txErr
+	}
+
+	logger.Debug("withdrawal reversed successfully")
+	return nil
+}
+
+func (u *walletUsecaseImpl) FinalizeWithdrawal(ctx context.Context, transactionID uint) error {
+	logger := u.log.WithFields(logrus.Fields{
+		"transaction_id": transactionID,
+	})
+	logger.Debug("attempting to finalize withdrawal")
+
+	txErr := u.walletRepo.WithTx(ctx, func(tx *gorm.DB) error {
+		err := u.transactionRepo.UpdateStatus(tx, transactionID, entity.TxStatusSuccess)
+		if err != nil {
+			if errors.Is(err, apperror.ErrRecordNotFound) {
+				return apperror.ErrTransactionAlreadyReversed
+			}
+			return fmt.Errorf("update transaction: %w", err)
+		}
+		return nil
+	})
+	if txErr != nil {
+		return txErr
+	}
+
+	logger.Debug("withdrawal finalized successfully")
+	return nil
 }

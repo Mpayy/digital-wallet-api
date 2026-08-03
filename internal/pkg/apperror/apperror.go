@@ -48,8 +48,10 @@ var (
 	ErrDuplicatePayment        = &AppError{Code: "DUPLICATE_PAYMENT_TRANSACTION", Message: "duplicate payment transaction", Status: http.StatusConflict}
 
 	// Transaction
-	ErrTransactionNotFound     = &AppError{Code: "TRANSACTION_NOT_FOUND", Message: "transaction not found", Status: http.StatusNotFound}
-	ErrTransactionAccessDenied = &AppError{Code: "TRANSACTION_ACCESS_DENIED", Message: "transaction not found", Status: http.StatusNotFound}
+	ErrTransactionNotFound        = &AppError{Code: "TRANSACTION_NOT_FOUND", Message: "transaction not found", Status: http.StatusNotFound}
+	ErrTransactionAccessDenied    = &AppError{Code: "TRANSACTION_ACCESS_DENIED", Message: "transaction not found", Status: http.StatusNotFound}
+	ErrInvalidTransactionType     = &AppError{Code: "INVALID_TRANSACTION_TYPE", Message: "invalid transaction type", Status: http.StatusBadRequest}
+	ErrTransactionAlreadyReversed = &AppError{Code: "TRANSACTION_ALREADY_REVERSED", Message: "transaction already reversed", Status: http.StatusBadRequest}
 
 	// Idempotency
 	ErrMissingIdempotencyKey  = &AppError{Code: "MISSING_IDEMPOTENCY_KEY", Message: "missing idempotency key", Status: http.StatusBadRequest}

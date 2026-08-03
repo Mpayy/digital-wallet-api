@@ -58,8 +58,11 @@ func InitializeAPI() *Application {
 	paymentCollector := gateway.NewMidtransGateway(viper)
 	paymentUsecase := usecase3.NewPaymentUsecase(paymentRepository, paymentCollector, walletUsecase, idempotencyService, logger)
 	paymentHandler := handler2.NewPaymentHandler(paymentUsecase, validate)
-	webhookHandler := handler2.NewWebhookHandler(paymentUsecase)
-	router := NewRouter(engine, logger, authHandler, walletHandler, transactionHandler, jwtMiddleware, paymentHandler, webhookHandler)
+	paymentDisburser := gateway.NewXenditGateway(viper)
+	withdrawalUsecase := usecase3.NewWithdrawalUsecase(paymentRepository, paymentDisburser, walletUsecase, logger)
+	withdrawalHandler := handler2.NewWithdrawalHandler(withdrawalUsecase, validate)
+	webhookHandler := handler2.NewWebhookHandler(paymentUsecase, withdrawalUsecase)
+	router := NewRouter(engine, logger, authHandler, walletHandler, transactionHandler, jwtMiddleware, paymentHandler, withdrawalHandler, webhookHandler)
 	application := NewApplication(app, router)
 	return application
 }
@@ -68,7 +71,7 @@ func InitializeAPI() *Application {
 
 var authSet = wire.NewSet(repository.NewAuthRepository, repository.NewAuthRedisRepository, usecase2.NewAuthUsecase, authhandler.NewAuthHandler)
 
-var walletSet = wire.NewSet(repository2.NewWalletRepository, usecase.NewWalletUsecase, handler.NewWalletHandler, wire.Bind(new(usecase3.WalletTopUpper), new(usecase.WalletUsecase)), wire.Bind(new(usecase2.WalletProvisioner), new(usecase.WalletUsecase)))
+var walletSet = wire.NewSet(repository2.NewWalletRepository, usecase.NewWalletUsecase, handler.NewWalletHandler, wire.Bind(new(usecase2.WalletProvisioner), new(usecase.WalletUsecase)), wire.Bind(new(usecase3.WalletTopUpper), new(usecase.WalletUsecase)), wire.Bind(new(usecase3.WalletWithdrawer), new(usecase.WalletUsecase)))
 
 var transactionSet = wire.NewSet(repository2.NewTransactionRepository, usecase.NewTransactionUsecase, handler.NewTransactionHandler)
 
@@ -76,7 +79,7 @@ var idempotencySet = wire.NewSet(repository2.NewIdempotencyRepository, usecase.N
 
 var transferSet = wire.NewSet(repository2.NewTransferRepository, usecase.NewTransferUsecase)
 
-var paymentSet = wire.NewSet(repository3.NewPaymentRepository, usecase3.NewPaymentUsecase, handler2.NewPaymentHandler, handler2.NewWebhookHandler, gateway.NewMidtransGateway)
+var paymentSet = wire.NewSet(repository3.NewPaymentRepository, usecase3.NewPaymentUsecase, handler2.NewPaymentHandler, handler2.NewWebhookHandler, usecase3.NewWithdrawalUsecase, handler2.NewWithdrawalHandler, gateway.NewMidtransGateway, gateway.NewXenditGateway)
 
 var middlewareSet = wire.NewSet(middleware.NewJwtMiddleware, middleware2.LoggerMiddleware)
 

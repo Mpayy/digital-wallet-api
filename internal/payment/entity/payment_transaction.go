@@ -16,6 +16,7 @@ type PaymentTransaction struct {
 	Provider            string                   `gorm:"column:provider;type:varchar(20);not null;uniqueIndex:uq_payment_provider_ref"`
 	ProviderRefID       string                   `gorm:"column:provider_ref_id;type:varchar(100);not null;uniqueIndex:uq_payment_provider_ref"`
 	UserID              uint                     `gorm:"column:user_id;not null;index"`
+	Type                string                   `gorm:"column:type;type:varchar(20);not null"`
 	Amount              int64                    `gorm:"column:amount;not null"`
 	Status              PaymentTransactionStatus `gorm:"column:status;type:varchar(20);not null;default:'PENDING'"`
 	WalletTransactionID *uint                    `gorm:"column:wallet_transaction_id;index"`
