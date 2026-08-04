@@ -1,3 +1,5 @@
+[![CI](https://github.com/Mpayy/digital-wallet-api/actions/workflows/ci.yml/badge.svg)](https://github.com/Mpayy/digital-wallet-api/actions/workflows/ci.yml)
+
 # Digital Wallet API
 
 A RESTful digital wallet API built with Go, simulating core features of mobile wallet applications like Dana or OVO — covering user registration, wallet top-up, peer-to-peer transfers, and transaction history.
