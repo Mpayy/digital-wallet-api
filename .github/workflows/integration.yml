@@ -42,7 +42,7 @@ jobs:
         run: migrate -path migrations -database "mysql://root@tcp(127.0.0.1:3306)/digital_wallet_test?multiStatements=true" up
 
       - name: Run integration test
-        run: go test -tags=integration -v ./...
+        run: go test -tags=integration -race ./test/integration/... -v
         env:
           DB_HOST: 127.0.0.1
           DB_PORT: 3306
