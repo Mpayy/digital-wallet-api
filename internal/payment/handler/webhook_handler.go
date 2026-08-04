@@ -36,7 +36,7 @@ func NewWebhookHandler(paymentUsecase usecase.PaymentUsecase, withdrawalUsecase 
 // @Success      200 {object} map[string]string
 // @Failure      400 {object} response.ErrorResponse{error=apperror.AppError} "WEBHOOK_PAYLOAD_TOO_LARGE"
 // @Failure      401 {object} response.ErrorResponse{error=apperror.AppError} "INVALID_WEBHOOK_SIGNATURE"
-// @Failure      404 {object} response.ErrorResponse{error=apperror.AppError} "RECORD_NOT_FOUND (provider_ref_id tidak dikenal)"
+// @Failure      404 {object} response.ErrorResponse{error=apperror.AppError} "RECORD_NOT_FOUND (unknown provider_ref_id)"
 // @Failure      500 {object} response.ErrorResponse{error=apperror.AppError} "INTERNAL_SERVER_ERROR"
 // @Router       /webhooks/midtrans [post]
 func (h *webhookHandlerImpl) MidtransNotification(ctx *gin.Context) {
@@ -67,9 +67,22 @@ func (h *webhookHandlerImpl) MidtransNotification(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
+// XenditNotification godoc
+// @Summary      Xendit withdrawal notification webhook
+// @Description  Receives asynchronous withdrawal status updates from Xendit. NOT intended to be called manually — Xendit triggers this endpoint automatically, including a verification token in the `X-CALLBACK-TOKEN` request header. "Try it out" in this UI will always fail unless a valid `X-CALLBACK-TOKEN` matching your backend configuration is provided; documented here for completeness only.
+// @Tags         withdrawal
+// @Accept       json
+// @Produce      json
+// @Param        request body dto.XenditWebhookPayload true "Xendit notification payload"
+// @Success      200 {object} map[string]string
+// @Failure      400 {object} response.ErrorResponse{error=apperror.AppError} "WEBHOOK_PAYLOAD_TOO_LARGE"
+// @Failure      401 {object} response.ErrorResponse{error=apperror.AppError} "INVALID_WEBHOOK_SIGNATURE"
+// @Failure      404 {object} response.ErrorResponse{error=apperror.AppError} "RECORD_NOT_FOUND (unknown provider_ref_id)"
+// @Failure      500 {object} response.ErrorResponse{error=apperror.AppError} "INTERNAL_SERVER_ERROR"
+// @Router       /webhooks/xendit [post]
 func (h *webhookHandlerImpl) XenditNotification(ctx *gin.Context) {
 	ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, 1*1024*1024)
-	payload, err := ctx.GetRawData()
+	rawPayload, err := ctx.GetRawData()
 	if err != nil {
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
@@ -80,7 +93,13 @@ func (h *webhookHandlerImpl) XenditNotification(ctx *gin.Context) {
 		return
 	}
 
-	if err := h.withdrawalUsecase.HandlePayoutWebhook(ctx.Request.Context(), payload, ctx.Request.Header); err != nil {
+	var notif dto.XenditPayoutWebhookPayload
+	if err := json.Unmarshal(rawPayload, &notif); err != nil {
+		response.Handle(ctx, apperror.ErrBadRequest)
+		return
+	}
+
+	if err := h.withdrawalUsecase.HandlePayoutWebhook(ctx.Request.Context(), rawPayload, ctx.Request.Header); err != nil {
 		response.Handle(ctx, err)
 		return
 	}

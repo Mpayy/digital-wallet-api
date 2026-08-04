@@ -224,6 +224,7 @@ func (u *walletUsecaseImpl) Withdraw(ctx context.Context, userID uint, amount in
 		if err := json.Unmarshal([]byte(cachedBody), &cached); err != nil {
 			return nil, fmt.Errorf("unmarshal cached withdraw response: %w", err)
 		}
+		logger.Info("withdrawal: duplicate request detected, returning cached response")
 		return &cached, nil
 	}
 
@@ -278,13 +279,16 @@ func (u *walletUsecaseImpl) Withdraw(ctx context.Context, userID uint, amount in
 	})
 
 	if txErr != nil {
-		u.idemService.MarkFailed(ctx, idemKey)
+		err := u.idemService.MarkFailed(ctx, idemKey)
+		if err != nil {
+			logger.WithError(err).Error("failed to mark idempotency key as failed")
+		}
 		return nil, txErr
 	}
 
 	err = u.idemService.Complete(ctx, idemKey, result)
 	if err != nil {
-		u.log.WithError(err).Error("withdrawal debited but failed to mark idempotency completed")
+		logger.WithError(err).Error("withdrawal debited but failed to mark idempotency completed")
 	}
 
 	logger.WithFields(logrus.Fields{
