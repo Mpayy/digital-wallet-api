@@ -3,9 +3,15 @@
 package integration_test
 
 import (
+	"context"
+	"errors"
 	"io"
+	"sync"
 	"testing"
 
+	"github.com/Mpayy/digital-wallet-api/internal/payment/gateway"
+	paymentRepo "github.com/Mpayy/digital-wallet-api/internal/payment/repository"
+	paymentUC "github.com/Mpayy/digital-wallet-api/internal/payment/usecase"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/entity"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/repository"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
@@ -64,4 +70,43 @@ func setupTransferUsecase(t *testing.T, db *gorm.DB) usecase.TransferUsecase {
 	idemService := usecase.NewIdempotencyService(logger, idemRepo)
 
 	return usecase.NewTransferUsecase(transferRepo, walletRepo, idemService, transactionRepo, logger)
+}
+
+type stubPaymentCollector struct {
+	mu        sync.Mutex
+	callCount int
+}
+
+func (s *stubPaymentCollector) CreateCharge(ctx context.Context, req gateway.ChargeRequest) (*gateway.ChargeResult, error) {
+	s.mu.Lock()
+	s.callCount++
+	s.mu.Unlock()
+	return &gateway.ChargeResult{ProviderRefID: req.OrderID, RedirectURL: "https://stub.test/pay/" + req.OrderID}, nil
+}
+func (s *stubPaymentCollector) VerifyAndParseWebhook(payload []byte) (*gateway.WebhookEvent, error) {
+	return nil, errors.New("not used in this test")
+}
+
+func setupPaymentUsecase(t *testing.T, db *gorm.DB, stubGW *stubPaymentCollector) paymentUC.PaymentUsecase {
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+
+	// SATU instance IdempotencyService, dipakai bareng Wallet & Payment —
+	// persis kayak di wire.go production (satu singleton, banyak consumer).
+	idemRepo := repository.NewIdempotencyRepository(db)
+	idemService := usecase.NewIdempotencyService(logger, idemRepo)
+
+	// WalletUsecase ASLI (bukan mock) — backing store-nya db yang SAMA
+	// dipakai test, jadi TopUp yang dipanggil PaymentUsecase beneran
+	// nyentuh row lock & saldo sungguhan, bukan simulasi.
+	wRepo := repository.NewWalletRepository(db)
+	txRepo := repository.NewTransactionRepository(db)
+	walletUC := usecase.NewWalletUsecase(wRepo, txRepo, idemService, logger)
+
+	pRepo := paymentRepo.NewPaymentRepository(db) // nama var beda dari alias package
+
+	// walletUC (tipe WalletUsecase) oper langsung sebagai WalletTopUpper,
+	// idemService (tipe IdempotencyService) oper langsung sebagai IdempotencyClaimer —
+	// dua-duanya interface-to-interface conversion otomatis, nggak perlu wrapping.
+	return paymentUC.NewPaymentUsecase(pRepo, stubGW, walletUC, idemService, logger)
 }
