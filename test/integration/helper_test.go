@@ -23,13 +23,13 @@ import (
 )
 
 func setupIntegrationDB(t *testing.T) *gorm.DB {
-	dsn := "root@tcp(localhost:3307)/digital_wallet_test?parseTime=True&loc=Local"
+	dsn := "root@tcp(127.0.0.1:3306)/digital_wallet_test?parseTime=True&loc=Local"
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{TranslateError: true})
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
 		db.Exec("SET FOREIGN_KEY_CHECKS = 0")
-		for _, table := range []string{"transactions", "transfers", "wallets", "idempotency_keys"} {
+		for _, table := range []string{"transactions", "transfers", "wallets", "idempotency_keys", "payment_transactions"} {
 			db.Exec("TRUNCATE TABLE " + table)
 		}
 		db.Exec("SET FOREIGN_KEY_CHECKS = 1")
