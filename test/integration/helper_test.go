@@ -8,6 +8,7 @@ import (
 	"io"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/Mpayy/digital-wallet-api/internal/payment/gateway"
 	paymentRepo "github.com/Mpayy/digital-wallet-api/internal/payment/repository"
@@ -16,23 +17,39 @@ import (
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/repository"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
 	"github.com/sirupsen/logrus"
 )
 
 func setupIntegrationDB(t *testing.T) *gorm.DB {
-	dsn := "root@tcp(127.0.0.1:3306)/digital_wallet_test?parseTime=True&loc=Local"
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{TranslateError: true})
+	dsn := os.Getenv("TEST_DB_DSN")
+	if dsn == "" {
+		dsn = "host=localhost user=postgres password=postgres dbname=digital_wallet_test port=5433 sslmode=disable"
+	}
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{TranslateError: true})
 	require.NoError(t, err)
 
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+
+	sqlDB.SetMaxOpenConns(50)
+	sqlDB.SetMaxIdleConns(25)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+
 	t.Cleanup(func() {
-		db.Exec("SET FOREIGN_KEY_CHECKS = 0")
-		for _, table := range []string{"transactions", "transfers", "wallets", "idempotency_keys", "payment_transactions"} {
-			db.Exec("TRUNCATE TABLE " + table)
-		}
-		db.Exec("SET FOREIGN_KEY_CHECKS = 1")
+		err := db.Exec(`
+			TRUNCATE TABLE 
+				transactions, 
+				transfers, 
+				wallets, 
+				idempotency_keys, 
+				payment_transactions 
+			RESTART IDENTITY CASCADE;
+		`).Error
+		
+		require.NoError(t, err)
 	})
 
 	return db

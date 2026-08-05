@@ -36,7 +36,7 @@ func NewTransactionHandler(transactionUsecase usecase.TransactionUsecase, valida
 // @Tags         transaction
 // @Produce      json
 // @Security     BearerAuth
-// @Param        type       query string false "Filter by type" Enums(TOPUP, TRANSFER_IN, TRANSFER_OUT)
+// @Param        type       query string false "Filter by type" Enums(TOPUP, TRANSFER_IN, TRANSFER_OUT, WITHDRAWAL)
 // @Param        start_date query string false "Start date (YYYY-MM-DD)"
 // @Param        end_date   query string false "End date (YYYY-MM-DD), defaults to today if start_date is set"
 // @Param        page       query int    false "Page number" default(1)

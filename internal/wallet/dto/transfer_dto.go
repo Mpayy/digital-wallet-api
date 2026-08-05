@@ -5,7 +5,7 @@ import "time"
 type TransferRequest struct {
 	ToUserID uint   `json:"to_user_id" validate:"required"`
 	Amount   int64  `json:"amount" validate:"required,gt=0"`
-	Note     string `json:"note" validate:"omitempty,max=255"`
+	Note     *string `json:"note" validate:"omitempty,max=255"`
 }
 
 type TransferResponse struct {

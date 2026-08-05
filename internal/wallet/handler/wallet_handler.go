@@ -74,7 +74,7 @@ func (h *walletHandlerImpl) GetMyWallet(ctx *gin.Context) {
 // @Failure      409 {object} response.ErrorResponse{error=apperror.AppError} "IDEMPOTENCY_KEY_CONFLICT / REQUEST_IN_PROGRESS"
 // @Failure      422 {object} response.ErrorResponse{error=apperror.AppError} "PREVIOUS_ATTEMPT_FAILED"
 // @Failure      500 {object} response.ErrorResponse{error=apperror.AppError} "INTERNAL_SERVER_ERROR"
-// @Router       /wallets/top-up [post]
+// @Router       /wallets/topup [post]
 func (h *walletHandlerImpl) TopUp(ctx *gin.Context) {
 	auth := middleware.GetAuthUser(ctx)
 	if auth == nil {

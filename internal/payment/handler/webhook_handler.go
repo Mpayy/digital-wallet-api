@@ -73,7 +73,7 @@ func (h *webhookHandlerImpl) MidtransNotification(ctx *gin.Context) {
 // @Tags         withdrawal
 // @Accept       json
 // @Produce      json
-// @Param        request body dto.XenditWebhookPayload true "Xendit notification payload"
+// @Param        request body dto.XenditPayoutWebhookPayload true "Xendit notification payload"
 // @Success      200 {object} map[string]string
 // @Failure      400 {object} response.ErrorResponse{error=apperror.AppError} "WEBHOOK_PAYLOAD_TOO_LARGE"
 // @Failure      401 {object} response.ErrorResponse{error=apperror.AppError} "INVALID_WEBHOOK_SIGNATURE"
