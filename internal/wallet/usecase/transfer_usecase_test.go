@@ -62,10 +62,11 @@ func TestTransferUsecase_Transfer(t *testing.T) {
 	ctx := context.Background()
 	dbErr := errors.New("unexpected error")
 	idemKey := "idemKey"
+	note := "test"
 	transferReq := dto.TransferRequest{
 		ToUserID: 2,
 		Amount:   5000,
-		Note:     "test",
+		Note:     &note,
 	}
 
 	t.Run("failed_invalid_amount", func(t *testing.T) {
@@ -76,7 +77,7 @@ func TestTransferUsecase_Transfer(t *testing.T) {
 		invalidTransferReq := dto.TransferRequest{
 			ToUserID: 2,
 			Amount:   0,
-			Note:     "test",
+			Note:     &note,
 		}
 
 		result, err := usecase.Transfer(ctx, fromWallet.UserID, invalidTransferReq, idemKey)
@@ -150,7 +151,7 @@ func TestTransferUsecase_Transfer(t *testing.T) {
 		selfTransferReq := dto.TransferRequest{
 			ToUserID: fromWallet.UserID,
 			Amount:   5000,
-			Note:     "test",
+			Note:     &note,
 		}
 
 		walletRepo.EXPECT().FindByUserID(ctx, fromWallet.UserID).Return(fromWallet, nil)
@@ -230,6 +231,7 @@ func TestTransferUsecase_Transfer(t *testing.T) {
 
 	t.Run("success_transfer_sender_id_larger_than_recipient_id", func(t *testing.T) {
 		usecase, walletRepo, transactionRepo, idemService, transferRepo := setupTransferUsecase(t)
+		note := "test_sender_id_larger_than_recipient_id"
 
 		fromWallet := &entity.Wallet{
 			ID:      105,
@@ -246,7 +248,7 @@ func TestTransferUsecase_Transfer(t *testing.T) {
 		largeRecipientIDTransferReq := dto.TransferRequest{
 			ToUserID: toWallet.UserID,
 			Amount:   5000,
-			Note:     "test_sender_id_larger_than_recipient_id",
+			Note:     &note,
 		}
 
 		fromBalanceBefore := fromWallet.Balance
@@ -432,7 +434,7 @@ func TestTransferUsecase_Transfer(t *testing.T) {
 		invalidtransferReq := dto.TransferRequest{
 			ToUserID: 2,
 			Amount:   10001,
-			Note:     "test_failed_insufficient_balance",
+			Note:     &note,
 		}
 
 		walletRepo.EXPECT().FindByUserID(ctx, fromWallet.UserID).Return(fromWallet, nil)

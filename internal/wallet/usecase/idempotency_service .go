@@ -71,9 +71,6 @@ func (s *idempotencyServiceImpl) Claim(ctx context.Context, key string, userID u
 		return false, "", fmt.Errorf("find idempotency key: %w", findErr)
 	}
 
-	// Key sudah ada — reuse trik yang sama seperti dulu: pastikan `TranslateError: true`
-	// di gorm.Open() supaya errors.Is(err, gorm.ErrDuplicatedKey) bisa dipakai langsung,
-	// tanpa cek manual kode error driver MySQL (1062).
 	if existing.RequestHash != reqHash {
 		logger.WithFields(logrus.Fields{
 			"existing_hash": existing.RequestHash, "new_hash": reqHash,
@@ -84,7 +81,7 @@ func (s *idempotencyServiceImpl) Claim(ctx context.Context, key string, userID u
 	switch existing.Status {
 	case entity.IdemStatusCompleted:
 		logger.Info("idempotency key already completed")
-		return false, existing.ResponseBody, nil // replay — inilah yang bikin retry aman
+		return false, *existing.ResponseBody, nil // replay — inilah yang bikin retry aman
 	case entity.IdemStatusProcessing:
 		return false, "", apperror.ErrRequestInProgress // 409 — request lain masih jalan
 	default: // FAILED

@@ -1,6 +1,29 @@
 basePath: /api/v1
 definitions:
-  github_com_Mpayy_digital-wallet-api_internal_auth_dto.LoginRequest:
+  apperror.AppError:
+    properties:
+      code:
+        type: string
+      fields:
+        additionalProperties:
+          type: string
+        type: object
+      message:
+        type: string
+    type: object
+  dto.CheckoutRequest:
+    properties:
+      amount:
+        type: integer
+    required:
+    - amount
+    type: object
+  dto.CheckoutResponse:
+    properties:
+      redirect_url:
+        type: string
+    type: object
+  dto.LoginRequest:
     properties:
       email:
         maxLength: 150
@@ -13,12 +36,38 @@ definitions:
     - email
     - password
     type: object
-  github_com_Mpayy_digital-wallet-api_internal_auth_dto.LoginResponse:
+  dto.LoginResponse:
     properties:
       token:
         type: string
     type: object
-  github_com_Mpayy_digital-wallet-api_internal_auth_dto.RegisterRequest:
+  dto.MetaPagination:
+    properties:
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  dto.MidtransWebhookPayload:
+    properties:
+      fraud_status:
+        type: string
+      gross_amount:
+        type: string
+      order_id:
+        type: string
+      signature_key:
+        type: string
+      status_code:
+        type: string
+      transaction_status:
+        type: string
+    type: object
+  dto.RegisterRequest:
     properties:
       email:
         maxLength: 150
@@ -36,7 +85,7 @@ definitions:
     - name
     - password
     type: object
-  github_com_Mpayy_digital-wallet-api_internal_auth_dto.RegisterResponse:
+  dto.RegisterResponse:
     properties:
       email:
         type: string
@@ -45,77 +94,14 @@ definitions:
       name:
         type: string
     type: object
-  github_com_Mpayy_digital-wallet-api_internal_payment_dto.CheckoutRequest:
+  dto.TopUpRequest:
     properties:
       amount:
         type: integer
     required:
     - amount
     type: object
-  github_com_Mpayy_digital-wallet-api_internal_payment_dto.CheckoutResponse:
-    properties:
-      redirect_url:
-        type: string
-    type: object
-  github_com_Mpayy_digital-wallet-api_internal_payment_dto.MidtransWebhookPayload:
-    properties:
-      fraud_status:
-        type: string
-      gross_amount:
-        type: string
-      order_id:
-        type: string
-      signature_key:
-        type: string
-      status_code:
-        type: string
-      transaction_status:
-        type: string
-    type: object
-  github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError:
-    properties:
-      code:
-        type: string
-      fields:
-        additionalProperties:
-          type: string
-        type: object
-      message:
-        type: string
-    type: object
-  github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse:
-    properties:
-      error: {}
-      success:
-        example: false
-        type: boolean
-    type: object
-  github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse:
-    properties:
-      data: {}
-      success:
-        example: true
-        type: boolean
-    type: object
-  github_com_Mpayy_digital-wallet-api_internal_wallet_dto.MetaPagination:
-    properties:
-      limit:
-        type: integer
-      page:
-        type: integer
-      total:
-        type: integer
-      total_pages:
-        type: integer
-    type: object
-  github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TopUpRequest:
-    properties:
-      amount:
-        type: integer
-    required:
-    - amount
-    type: object
-  github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TopUpResponse:
+  dto.TopUpResponse:
     properties:
       amount:
         type: integer
@@ -134,16 +120,16 @@ definitions:
       wallet_id:
         type: integer
     type: object
-  github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransactionListResponse:
+  dto.TransactionListResponse:
     properties:
       data:
         items:
-          $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransactionResponse'
+          $ref: '#/definitions/dto.TransactionResponse'
         type: array
       meta:
-        $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.MetaPagination'
+        $ref: '#/definitions/dto.MetaPagination'
     type: object
-  github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransactionResponse:
+  dto.TransactionResponse:
     properties:
       amount:
         type: integer
@@ -160,7 +146,7 @@ definitions:
       type:
         type: string
     type: object
-  github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransferRequest:
+  dto.TransferRequest:
     properties:
       amount:
         type: integer
@@ -173,7 +159,7 @@ definitions:
     - amount
     - to_user_id
     type: object
-  github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransferResponse:
+  dto.TransferResponse:
     properties:
       amount:
         type: integer
@@ -194,7 +180,7 @@ definitions:
       type:
         type: string
     type: object
-  github_com_Mpayy_digital-wallet-api_internal_wallet_dto.WalletResponse:
+  dto.WalletResponse:
     properties:
       balance:
         type: integer
@@ -206,6 +192,74 @@ definitions:
         type: string
       user_id:
         type: integer
+    type: object
+  dto.WithdrawalRequest:
+    properties:
+      account_holder_name:
+        type: string
+      account_number:
+        type: string
+      amount:
+        type: integer
+      channel_code:
+        type: string
+    required:
+    - account_holder_name
+    - account_number
+    - amount
+    - channel_code
+    type: object
+  dto.WithdrawalResponse:
+    properties:
+      account_holder_name:
+        type: string
+      account_number:
+        type: string
+      amount:
+        type: integer
+      balance_after:
+        type: integer
+      balance_before:
+        type: integer
+      channel_code:
+        description: ganti nama, alasan di bawah
+        type: string
+      created_at:
+        type: string
+      reference_id:
+        type: string
+      status:
+        type: string
+      transaction_id:
+        type: integer
+      wallet_id:
+        type: integer
+    type: object
+  dto.XenditPayoutWebhookPayload:
+    properties:
+      data:
+        properties:
+          reference_id:
+            type: string
+          status:
+            type: string
+        type: object
+      event:
+        type: string
+    type: object
+  response.ErrorResponse:
+    properties:
+      error: {}
+      success:
+        example: false
+        type: boolean
+    type: object
+  response.SuccessResponse:
+    properties:
+      data: {}
+      success:
+        example: true
+        type: boolean
     type: object
 info:
   contact: {}
@@ -225,7 +279,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_auth_dto.LoginRequest'
+          $ref: '#/definitions/dto.LoginRequest'
       produces:
       - application/json
       responses:
@@ -233,37 +287,37 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse'
+            - $ref: '#/definitions/response.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_auth_dto.LoginResponse'
+                  $ref: '#/definitions/dto.LoginResponse'
               type: object
         "400":
-          description: BAD_REQUEST atau VALIDATION_ERROR
+          description: BAD_REQUEST / VALIDATION_ERROR
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "401":
           description: INVALID_CREDENTIALS
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "500":
           description: INTERNAL_SERVER_ERROR
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
       summary: Login
       tags:
@@ -277,24 +331,24 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse'
+            $ref: '#/definitions/response.SuccessResponse'
         "401":
           description: UNAUTHORIZED / INVALID_TOKEN / TOKEN_HAS_EXPIRED
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "500":
           description: INTERNAL_SERVER_ERROR
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
       security:
       - BearerAuth: []
@@ -313,7 +367,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_auth_dto.RegisterRequest'
+          $ref: '#/definitions/dto.RegisterRequest'
       produces:
       - application/json
       responses:
@@ -321,38 +375,37 @@ paths:
           description: Created
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse'
+            - $ref: '#/definitions/response.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_auth_dto.RegisterResponse'
+                  $ref: '#/definitions/dto.RegisterResponse'
               type: object
         "400":
-          description: BAD_REQUEST (malformed JSON) atau VALIDATION_ERROR (lihat field
-            'fields')
+          description: BAD_REQUEST / VALIDATION_ERROR
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "409":
           description: EMAIL_ALREADY_EXISTS
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "500":
           description: INTERNAL_SERVER_ERROR
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
       summary: Register a new user
       tags:
@@ -367,6 +420,7 @@ paths:
         - TOPUP
         - TRANSFER_IN
         - TRANSFER_OUT
+        - WITHDRAWAL
         in: query
         name: type
         type: string
@@ -395,37 +449,37 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse'
+            - $ref: '#/definitions/response.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransactionListResponse'
+                  $ref: '#/definitions/dto.TransactionListResponse'
               type: object
         "400":
           description: BAD_REQUEST / VALIDATION_ERROR
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "401":
           description: UNAUTHORIZED / INVALID_TOKEN / TOKEN_HAS_EXPIRED
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "500":
           description: INTERNAL_SERVER_ERROR
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
       security:
       - BearerAuth: []
@@ -449,46 +503,46 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse'
+            - $ref: '#/definitions/response.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransactionResponse'
+                  $ref: '#/definitions/dto.TransactionResponse'
               type: object
         "400":
           description: BAD_REQUEST
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "401":
           description: UNAUTHORIZED / INVALID_TOKEN / TOKEN_HAS_EXPIRED
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "404":
           description: TRANSACTION_NOT_FOUND
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "500":
           description: INTERNAL_SERVER_ERROR
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
       security:
       - BearerAuth: []
@@ -505,35 +559,35 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse'
+            - $ref: '#/definitions/response.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.WalletResponse'
+                  $ref: '#/definitions/dto.WalletResponse'
               type: object
         "401":
           description: UNAUTHORIZED / INVALID_TOKEN / TOKEN_HAS_EXPIRED
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "500":
           description: INTERNAL_SERVER_ERROR
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
       security:
       - BearerAuth: []
       summary: Get my wallet
       tags:
       - wallet
-  /wallets/top-up:
+  /wallets/topup:
     post:
       consumes:
       - application/json
@@ -550,7 +604,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TopUpRequest'
+          $ref: '#/definitions/dto.TopUpRequest'
       produces:
       - application/json
       responses:
@@ -558,65 +612,65 @@ paths:
           description: Created
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse'
+            - $ref: '#/definitions/response.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TopUpResponse'
+                  $ref: '#/definitions/dto.TopUpResponse'
               type: object
         "400":
           description: BAD_REQUEST / VALIDATION_ERROR / MISSING_IDEMPOTENCY_KEY /
             INVALID_AMOUNT
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "401":
           description: UNAUTHORIZED / INVALID_TOKEN / TOKEN_HAS_EXPIRED
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "404":
           description: WALLET_NOT_FOUND
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "409":
           description: IDEMPOTENCY_KEY_CONFLICT / REQUEST_IN_PROGRESS
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "422":
           description: PREVIOUS_ATTEMPT_FAILED
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "500":
           description: INTERNAL_SERVER_ERROR
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
       security:
       - BearerAuth: []
@@ -641,7 +695,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_payment_dto.CheckoutRequest'
+          $ref: '#/definitions/dto.CheckoutRequest'
       produces:
       - application/json
       responses:
@@ -649,55 +703,56 @@ paths:
           description: Created
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse'
+            - $ref: '#/definitions/response.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_payment_dto.CheckoutResponse'
+                  $ref: '#/definitions/dto.CheckoutResponse'
               type: object
         "400":
-          description: BAD_REQUEST / VALIDATION_ERROR / MISSING_IDEMPOTENCY_KEY
+          description: BAD_REQUEST / VALIDATION_ERROR / MISSING_IDEMPOTENCY_KEY /
+            INVALID_AMOUNT
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "401":
           description: UNAUTHORIZED / INVALID_TOKEN / TOKEN_HAS_EXPIRED
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "409":
           description: IDEMPOTENCY_KEY_CONFLICT / REQUEST_IN_PROGRESS
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "422":
           description: PREVIOUS_ATTEMPT_FAILED
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "500":
           description: INTERNAL_SERVER_ERROR
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
       security:
       - BearerAuth: []
@@ -721,7 +776,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransferRequest'
+          $ref: '#/definitions/dto.TransferRequest'
       produces:
       - application/json
       responses:
@@ -729,71 +784,161 @@ paths:
           description: Created
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse'
+            - $ref: '#/definitions/response.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransferResponse'
+                  $ref: '#/definitions/dto.TransferResponse'
               type: object
         "400":
           description: BAD_REQUEST / VALIDATION_ERROR / MISSING_IDEMPOTENCY_KEY /
             INVALID_AMOUNT
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "401":
           description: UNAUTHORIZED / INVALID_TOKEN / TOKEN_HAS_EXPIRED
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "404":
           description: WALLET_NOT_FOUND / RECIPIENT_NOT_FOUND
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "409":
           description: IDEMPOTENCY_KEY_CONFLICT / REQUEST_IN_PROGRESS
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "422":
           description: INSUFFICIENT_BALANCE / SELF_TRANSFER_NOT_ALLOWED / PREVIOUS_ATTEMPT_FAILED
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "500":
           description: INTERNAL_SERVER_ERROR
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
       security:
       - BearerAuth: []
       summary: Transfer balance to another user
       tags:
       - wallet
+  /wallets/withdraw:
+    post:
+      consumes:
+      - application/json
+      description: Creates a withdrawal request for the authenticated user. The withdrawal
+        will be processed asynchronously.
+      parameters:
+      - description: Client-generated UUID v4, unique per withdrawal attempt
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: Withdrawal payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.WithdrawalRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.WithdrawalResponse'
+              type: object
+        "400":
+          description: BAD_REQUEST / VALIDATION_ERROR / MISSING_IDEMPOTENCY_KEY /
+            INVALID_AMOUNT
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/apperror.AppError'
+              type: object
+        "401":
+          description: UNAUTHORIZED / INVALID_TOKEN / TOKEN_HAS_EXPIRED
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/apperror.AppError'
+              type: object
+        "404":
+          description: WALLET_NOT_FOUND
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/apperror.AppError'
+              type: object
+        "409":
+          description: IDEMPOTENCY_KEY_CONFLICT / REQUEST_IN_PROGRESS
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/apperror.AppError'
+              type: object
+        "422":
+          description: PREVIOUS_ATTEMPT_FAILED / INSUFFICIENT_BALANCE
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/apperror.AppError'
+              type: object
+        "500":
+          description: INTERNAL_SERVER_ERROR
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/apperror.AppError'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Create a withdrawal request
+      tags:
+      - withdrawal
   /webhooks/midtrans:
     post:
       consumes:
@@ -809,7 +954,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_payment_dto.MidtransWebhookPayload'
+          $ref: '#/definitions/dto.MidtransWebhookPayload'
       produces:
       - application/json
       responses:
@@ -823,41 +968,105 @@ paths:
           description: WEBHOOK_PAYLOAD_TOO_LARGE
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "401":
           description: INVALID_WEBHOOK_SIGNATURE
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "404":
-          description: RECORD_NOT_FOUND (provider_ref_id tidak dikenal)
+          description: RECORD_NOT_FOUND (unknown provider_ref_id)
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
         "500":
           description: INTERNAL_SERVER_ERROR
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse'
+            - $ref: '#/definitions/response.ErrorResponse'
             - properties:
                 error:
-                  $ref: '#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError'
+                  $ref: '#/definitions/apperror.AppError'
               type: object
       summary: Midtrans payment notification webhook
       tags:
       - payment
+  /webhooks/xendit:
+    post:
+      consumes:
+      - application/json
+      description: Receives asynchronous withdrawal status updates from Xendit. NOT
+        intended to be called manually — Xendit triggers this endpoint automatically,
+        including a verification token in the `X-CALLBACK-TOKEN` request header. "Try
+        it out" in this UI will always fail unless a valid `X-CALLBACK-TOKEN` matching
+        your backend configuration is provided; documented here for completeness only.
+      parameters:
+      - description: Xendit notification payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.XenditPayoutWebhookPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: WEBHOOK_PAYLOAD_TOO_LARGE
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/apperror.AppError'
+              type: object
+        "401":
+          description: INVALID_WEBHOOK_SIGNATURE
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/apperror.AppError'
+              type: object
+        "404":
+          description: RECORD_NOT_FOUND (unknown provider_ref_id)
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/apperror.AppError'
+              type: object
+        "500":
+          description: INTERNAL_SERVER_ERROR
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.ErrorResponse'
+            - properties:
+                error:
+                  $ref: '#/definitions/apperror.AppError'
+              type: object
+      summary: Xendit withdrawal notification webhook
+      tags:
+      - withdrawal
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.

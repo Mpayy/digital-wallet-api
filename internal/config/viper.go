@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/viper"
@@ -18,7 +19,10 @@ func NewViper() *viper.Viper {
 	config.AutomaticEnv()
 
 	if err := config.ReadInConfig(); err != nil {
-		panic(fmt.Errorf("fatal error config file: %w", err))
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if !errors.As(err, &configFileNotFoundError) {
+			panic(fmt.Errorf("fatal error config file: %w", err))
+		}
 	}
 
 	return config

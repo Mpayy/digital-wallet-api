@@ -39,9 +39,9 @@ func NewWithdrawalHandler(withdrawalUsecase usecase.WithdrawalUsecase, validator
 // @Failure      401 {object} response.ErrorResponse{error=apperror.AppError} "UNAUTHORIZED / INVALID_TOKEN / TOKEN_HAS_EXPIRED"
 // @Failure      404 {object} response.ErrorResponse{error=apperror.AppError} "WALLET_NOT_FOUND"
 // @Failure      409 {object} response.ErrorResponse{error=apperror.AppError} "IDEMPOTENCY_KEY_CONFLICT / REQUEST_IN_PROGRESS"
-// @Failure      422 {object} response.ErrorResponse{error=apperror.AppError} "PREVIOUS_ATTEMPT_FAILED /INSUFFICIENT_BALANCE"
+// @Failure      422 {object} response.ErrorResponse{error=apperror.AppError} "PREVIOUS_ATTEMPT_FAILED / INSUFFICIENT_BALANCE"
 // @Failure      500 {object} response.ErrorResponse{error=apperror.AppError} "INTERNAL_SERVER_ERROR"
-// @Router       /wallets/withdrawal [post]
+// @Router       /wallets/withdraw [post]
 func (h *withdrawalHandlerImpl) CreateWithdrawal(ctx *gin.Context) {
 	auth := middleware.GetAuthUser(ctx)
 	if auth == nil {

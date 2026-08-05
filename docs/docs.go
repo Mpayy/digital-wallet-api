@@ -35,7 +35,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_auth_dto.LoginRequest"
+                            "$ref": "#/definitions/dto.LoginRequest"
                         }
                     }
                 ],
@@ -45,13 +45,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse"
+                                    "$ref": "#/definitions/response.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_auth_dto.LoginResponse"
+                                            "$ref": "#/definitions/dto.LoginResponse"
                                         }
                                     }
                                 }
@@ -59,17 +59,17 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "BAD_REQUEST atau VALIDATION_ERROR",
+                        "description": "BAD_REQUEST / VALIDATION_ERROR",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -81,13 +81,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -99,13 +99,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -134,7 +134,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse"
+                            "$ref": "#/definitions/response.SuccessResponse"
                         }
                     },
                     "401": {
@@ -142,13 +142,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -160,13 +160,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -196,7 +196,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_auth_dto.RegisterRequest"
+                            "$ref": "#/definitions/dto.RegisterRequest"
                         }
                     }
                 ],
@@ -206,13 +206,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse"
+                                    "$ref": "#/definitions/response.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_auth_dto.RegisterResponse"
+                                            "$ref": "#/definitions/dto.RegisterResponse"
                                         }
                                     }
                                 }
@@ -220,17 +220,17 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "BAD_REQUEST (malformed JSON) atau VALIDATION_ERROR (lihat field 'fields')",
+                        "description": "BAD_REQUEST / VALIDATION_ERROR",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -242,13 +242,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -260,13 +260,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -296,7 +296,8 @@ const docTemplate = `{
                         "enum": [
                             "TOPUP",
                             "TRANSFER_IN",
-                            "TRANSFER_OUT"
+                            "TRANSFER_OUT",
+                            "WITHDRAWAL"
                         ],
                         "type": "string",
                         "description": "Filter by type",
@@ -336,13 +337,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse"
+                                    "$ref": "#/definitions/response.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransactionListResponse"
+                                            "$ref": "#/definitions/dto.TransactionListResponse"
                                         }
                                     }
                                 }
@@ -354,13 +355,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -372,13 +373,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -390,13 +391,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -436,13 +437,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse"
+                                    "$ref": "#/definitions/response.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransactionResponse"
+                                            "$ref": "#/definitions/dto.TransactionResponse"
                                         }
                                     }
                                 }
@@ -454,13 +455,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -472,13 +473,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -490,13 +491,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -508,13 +509,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -545,13 +546,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse"
+                                    "$ref": "#/definitions/response.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.WalletResponse"
+                                            "$ref": "#/definitions/dto.WalletResponse"
                                         }
                                     }
                                 }
@@ -563,13 +564,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -581,13 +582,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -597,7 +598,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/wallets/top-up": {
+        "/wallets/topup": {
             "post": {
                 "security": [
                     {
@@ -629,7 +630,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TopUpRequest"
+                            "$ref": "#/definitions/dto.TopUpRequest"
                         }
                     }
                 ],
@@ -639,13 +640,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse"
+                                    "$ref": "#/definitions/response.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TopUpResponse"
+                                            "$ref": "#/definitions/dto.TopUpResponse"
                                         }
                                     }
                                 }
@@ -657,13 +658,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -675,13 +676,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -693,13 +694,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -711,13 +712,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -729,13 +730,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -747,13 +748,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -795,7 +796,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_payment_dto.CheckoutRequest"
+                            "$ref": "#/definitions/dto.CheckoutRequest"
                         }
                     }
                 ],
@@ -805,13 +806,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse"
+                                    "$ref": "#/definitions/response.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_payment_dto.CheckoutResponse"
+                                            "$ref": "#/definitions/dto.CheckoutResponse"
                                         }
                                     }
                                 }
@@ -819,17 +820,17 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "BAD_REQUEST / VALIDATION_ERROR / MISSING_IDEMPOTENCY_KEY",
+                        "description": "BAD_REQUEST / VALIDATION_ERROR / MISSING_IDEMPOTENCY_KEY / INVALID_AMOUNT",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -841,13 +842,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -859,13 +860,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -877,13 +878,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -895,13 +896,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -943,7 +944,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransferRequest"
+                            "$ref": "#/definitions/dto.TransferRequest"
                         }
                     }
                 ],
@@ -953,13 +954,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse"
+                                    "$ref": "#/definitions/response.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransferResponse"
+                                            "$ref": "#/definitions/dto.TransferResponse"
                                         }
                                     }
                                 }
@@ -971,13 +972,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -989,13 +990,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -1007,13 +1008,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -1025,13 +1026,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -1043,13 +1044,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -1061,13 +1062,179 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/wallets/withdraw": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a withdrawal request for the authenticated user. The withdrawal will be processed asynchronously.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "withdrawal"
+                ],
+                "summary": "Create a withdrawal request",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Client-generated UUID v4, unique per withdrawal attempt",
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Withdrawal payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.WithdrawalRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.WithdrawalResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "BAD_REQUEST / VALIDATION_ERROR / MISSING_IDEMPOTENCY_KEY / INVALID_AMOUNT",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.ErrorResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "$ref": "#/definitions/apperror.AppError"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "UNAUTHORIZED / INVALID_TOKEN / TOKEN_HAS_EXPIRED",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.ErrorResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "$ref": "#/definitions/apperror.AppError"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "WALLET_NOT_FOUND",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.ErrorResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "$ref": "#/definitions/apperror.AppError"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "IDEMPOTENCY_KEY_CONFLICT / REQUEST_IN_PROGRESS",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.ErrorResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "$ref": "#/definitions/apperror.AppError"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "422": {
+                        "description": "PREVIOUS_ATTEMPT_FAILED / INSUFFICIENT_BALANCE",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.ErrorResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "$ref": "#/definitions/apperror.AppError"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "INTERNAL_SERVER_ERROR",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.ErrorResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -1097,7 +1264,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_payment_dto.MidtransWebhookPayload"
+                            "$ref": "#/definitions/dto.MidtransWebhookPayload"
                         }
                     }
                 ],
@@ -1116,13 +1283,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -1134,13 +1301,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -1148,17 +1315,17 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "RECORD_NOT_FOUND (provider_ref_id tidak dikenal)",
+                        "description": "RECORD_NOT_FOUND (unknown provider_ref_id)",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -1170,13 +1337,122 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse"
+                                    "$ref": "#/definitions/response.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "error": {
-                                            "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError"
+                                            "$ref": "#/definitions/apperror.AppError"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/webhooks/xendit": {
+            "post": {
+                "description": "Receives asynchronous withdrawal status updates from Xendit. NOT intended to be called manually — Xendit triggers this endpoint automatically, including a verification token in the ` + "`" + `X-CALLBACK-TOKEN` + "`" + ` request header. \"Try it out\" in this UI will always fail unless a valid ` + "`" + `X-CALLBACK-TOKEN` + "`" + ` matching your backend configuration is provided; documented here for completeness only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "withdrawal"
+                ],
+                "summary": "Xendit withdrawal notification webhook",
+                "parameters": [
+                    {
+                        "description": "Xendit notification payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.XenditPayoutWebhookPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "WEBHOOK_PAYLOAD_TOO_LARGE",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.ErrorResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "$ref": "#/definitions/apperror.AppError"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "INVALID_WEBHOOK_SIGNATURE",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.ErrorResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "$ref": "#/definitions/apperror.AppError"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "RECORD_NOT_FOUND (unknown provider_ref_id)",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.ErrorResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "$ref": "#/definitions/apperror.AppError"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "INTERNAL_SERVER_ERROR",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.ErrorResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "$ref": "#/definitions/apperror.AppError"
                                         }
                                     }
                                 }
@@ -1188,7 +1464,43 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_Mpayy_digital-wallet-api_internal_auth_dto.LoginRequest": {
+        "apperror.AppError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "fields": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CheckoutRequest": {
+            "type": "object",
+            "required": [
+                "amount"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.CheckoutResponse": {
+            "type": "object",
+            "properties": {
+                "redirect_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.LoginRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -1206,7 +1518,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Mpayy_digital-wallet-api_internal_auth_dto.LoginResponse": {
+        "dto.LoginResponse": {
             "type": "object",
             "properties": {
                 "token": {
@@ -1214,7 +1526,47 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Mpayy_digital-wallet-api_internal_auth_dto.RegisterRequest": {
+        "dto.MetaPagination": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.MidtransWebhookPayload": {
+            "type": "object",
+            "properties": {
+                "fraud_status": {
+                    "type": "string"
+                },
+                "gross_amount": {
+                    "type": "string"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "signature_key": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "string"
+                },
+                "transaction_status": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.RegisterRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -1238,7 +1590,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Mpayy_digital-wallet-api_internal_auth_dto.RegisterResponse": {
+        "dto.RegisterResponse": {
             "type": "object",
             "properties": {
                 "email": {
@@ -1252,7 +1604,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Mpayy_digital-wallet-api_internal_payment_dto.CheckoutRequest": {
+        "dto.TopUpRequest": {
             "type": "object",
             "required": [
                 "amount"
@@ -1263,103 +1615,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Mpayy_digital-wallet-api_internal_payment_dto.CheckoutResponse": {
-            "type": "object",
-            "properties": {
-                "redirect_url": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_Mpayy_digital-wallet-api_internal_payment_dto.MidtransWebhookPayload": {
-            "type": "object",
-            "properties": {
-                "fraud_status": {
-                    "type": "string"
-                },
-                "gross_amount": {
-                    "type": "string"
-                },
-                "order_id": {
-                    "type": "string"
-                },
-                "signature_key": {
-                    "type": "string"
-                },
-                "status_code": {
-                    "type": "string"
-                },
-                "transaction_status": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_Mpayy_digital-wallet-api_internal_pkg_apperror.AppError": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "fields": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
-                },
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_Mpayy_digital-wallet-api_internal_pkg_response.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "error": {},
-                "success": {
-                    "type": "boolean",
-                    "example": false
-                }
-            }
-        },
-        "github_com_Mpayy_digital-wallet-api_internal_pkg_response.SuccessResponse": {
-            "type": "object",
-            "properties": {
-                "data": {},
-                "success": {
-                    "type": "boolean",
-                    "example": true
-                }
-            }
-        },
-        "github_com_Mpayy_digital-wallet-api_internal_wallet_dto.MetaPagination": {
-            "type": "object",
-            "properties": {
-                "limit": {
-                    "type": "integer"
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TopUpRequest": {
-            "type": "object",
-            "required": [
-                "amount"
-            ],
-            "properties": {
-                "amount": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TopUpResponse": {
+        "dto.TopUpResponse": {
             "type": "object",
             "properties": {
                 "amount": {
@@ -1388,21 +1644,21 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransactionListResponse": {
+        "dto.TransactionListResponse": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransactionResponse"
+                        "$ref": "#/definitions/dto.TransactionResponse"
                     }
                 },
                 "meta": {
-                    "$ref": "#/definitions/github_com_Mpayy_digital-wallet-api_internal_wallet_dto.MetaPagination"
+                    "$ref": "#/definitions/dto.MetaPagination"
                 }
             }
         },
-        "github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransactionResponse": {
+        "dto.TransactionResponse": {
             "type": "object",
             "properties": {
                 "amount": {
@@ -1428,7 +1684,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransferRequest": {
+        "dto.TransferRequest": {
             "type": "object",
             "required": [
                 "amount",
@@ -1447,7 +1703,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Mpayy_digital-wallet-api_internal_wallet_dto.TransferResponse": {
+        "dto.TransferResponse": {
             "type": "object",
             "properties": {
                 "amount": {
@@ -1479,7 +1735,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_Mpayy_digital-wallet-api_internal_wallet_dto.WalletResponse": {
+        "dto.WalletResponse": {
             "type": "object",
             "properties": {
                 "balance": {
@@ -1496,6 +1752,107 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "dto.WithdrawalRequest": {
+            "type": "object",
+            "required": [
+                "account_holder_name",
+                "account_number",
+                "amount",
+                "channel_code"
+            ],
+            "properties": {
+                "account_holder_name": {
+                    "type": "string"
+                },
+                "account_number": {
+                    "type": "string"
+                },
+                "amount": {
+                    "type": "integer"
+                },
+                "channel_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.WithdrawalResponse": {
+            "type": "object",
+            "properties": {
+                "account_holder_name": {
+                    "type": "string"
+                },
+                "account_number": {
+                    "type": "string"
+                },
+                "amount": {
+                    "type": "integer"
+                },
+                "balance_after": {
+                    "type": "integer"
+                },
+                "balance_before": {
+                    "type": "integer"
+                },
+                "channel_code": {
+                    "description": "ganti nama, alasan di bawah",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "reference_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "transaction_id": {
+                    "type": "integer"
+                },
+                "wallet_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.XenditPayoutWebhookPayload": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "reference_id": {
+                            "type": "string"
+                        },
+                        "status": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "event": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {},
+                "success": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "response.SuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "success": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         }

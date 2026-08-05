@@ -38,7 +38,7 @@ func NewPaymentHandler(paymentUsecase usecase.PaymentUsecase, validator *validat
 // @Param        Idempotency-Key header string true "Client-generated UUID v4, unique per checkout attempt"
 // @Param        request body dto.CheckoutRequest true "Checkout payload"
 // @Success      201 {object} response.SuccessResponse{data=dto.CheckoutResponse}
-// @Failure      400 {object} response.ErrorResponse{error=apperror.AppError} "BAD_REQUEST / VALIDATION_ERROR / MISSING_IDEMPOTENCY_KEY"
+// @Failure      400 {object} response.ErrorResponse{error=apperror.AppError} "BAD_REQUEST / VALIDATION_ERROR / MISSING_IDEMPOTENCY_KEY / INVALID_AMOUNT"
 // @Failure      401 {object} response.ErrorResponse{error=apperror.AppError} "UNAUTHORIZED / INVALID_TOKEN / TOKEN_HAS_EXPIRED"
 // @Failure      409 {object} response.ErrorResponse{error=apperror.AppError} "IDEMPOTENCY_KEY_CONFLICT / REQUEST_IN_PROGRESS"
 // @Failure      422 {object} response.ErrorResponse{error=apperror.AppError} "PREVIOUS_ATTEMPT_FAILED"

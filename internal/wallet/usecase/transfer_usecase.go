@@ -101,7 +101,7 @@ func (u *transferUsecaseImpl) Transfer(ctx context.Context, fromUserID uint, req
 				return apperror.ErrWalletNotFound
 			}
 
-			return fmt.Errorf("lock sender wallet: %w", errLock1)
+			return fmt.Errorf("lock first wallet: %w", errLock1)
 		}
 
 		secondLocked, errLock2 := u.walletRepo.LockByID(tx, secondID)
@@ -110,7 +110,7 @@ func (u *transferUsecaseImpl) Transfer(ctx context.Context, fromUserID uint, req
 				return apperror.ErrWalletNotFound
 			}
 
-			return fmt.Errorf("lock recipient wallet: %w", errLock2)
+			return fmt.Errorf("lock second wallet: %w", errLock2)
 		}
 
 		// Petakan kembali locked object -> peran bisnis (sender/recipient)
@@ -132,12 +132,12 @@ func (u *transferUsecaseImpl) Transfer(ctx context.Context, fromUserID uint, req
 
 		errSaveSender := u.walletRepo.Save(tx, sender)
 		if errSaveSender != nil {
-			return fmt.Errorf("save sender wallet: %w", errSaveSender)
+			return fmt.Errorf("save first wallet: %w", errSaveSender)
 		}
 
 		errSaveRecipient := u.walletRepo.Save(tx, recipient)
 		if errSaveRecipient != nil {
-			return fmt.Errorf("save recipient wallet: %w", errSaveRecipient)
+			return fmt.Errorf("save second wallet: %w", errSaveRecipient)
 		}
 
 		transferTx := &entity.Transfer{

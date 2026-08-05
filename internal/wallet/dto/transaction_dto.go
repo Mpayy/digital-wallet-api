@@ -3,7 +3,7 @@ package dto
 import "time"
 
 type TransactionFilter struct {
-	Type      string `form:"type" validate:"omitempty,oneof=TOPUP TRANSFER_IN TRANSFER_OUT"`
+	Type      string `form:"type" validate:"omitempty,oneof=TOPUP TRANSFER_IN TRANSFER_OUT WITHDRAWAL"`
 	StartDate string `form:"start_date" validate:"omitempty,datetime=2006-01-02,ltefield=EndDate"`
 	EndDate   string `form:"end_date" validate:"omitempty,datetime=2006-01-02"`
 	Page      int    `form:"page" validate:"omitempty,gte=1"`

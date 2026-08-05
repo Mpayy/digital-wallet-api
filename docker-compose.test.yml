@@ -1,10 +1,13 @@
 services:
-  mysql-test:
-    image: mysql:8
+  postgres-test:
+    image: postgres:16-alpine
     environment:
-      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
-      MYSQL_DATABASE: digital_wallet_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: digital_wallet_test
     ports:
-      - "3307:3306"
+      - "5433:5432"
     tmpfs:
-      - /var/lib/mysql
+      - /var/lib/postgresql/data
+
+    command: postgres -c max_connections=300 -c shared_buffers=256MB

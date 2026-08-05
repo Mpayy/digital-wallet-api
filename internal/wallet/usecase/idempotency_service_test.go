@@ -154,7 +154,7 @@ func TestIdempotencyService_Claim(t *testing.T) {
 			UserID:       userID,
 			Endpoint:     endpoint,
 			RequestHash:  expectedHash,
-			ResponseBody: expectedResponseBody,
+			ResponseBody: &expectedResponseBody,
 			Status:       entity.IdemStatusCompleted,
 		}
 
@@ -184,7 +184,7 @@ func TestIdempotencyService_Claim(t *testing.T) {
 			UserID:       userID,
 			Endpoint:     endpoint,
 			RequestHash:  expectedHash,
-			ResponseBody: "",
+			ResponseBody: nil,
 			Status:       entity.IdemStatusProcessing,
 		}
 
@@ -214,7 +214,7 @@ func TestIdempotencyService_Claim(t *testing.T) {
 			UserID:       userID,
 			Endpoint:     endpoint,
 			RequestHash:  expectedHash,
-			ResponseBody: "",
+			ResponseBody: nil,
 			Status:       entity.IdemStatusFailed,
 		}
 

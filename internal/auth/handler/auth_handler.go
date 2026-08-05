@@ -36,7 +36,7 @@ func NewAuthHandler(authUsecase usecase.AuthUsecase, validator *validator.Valida
 // @Produce      json
 // @Param        request body dto.RegisterRequest true "User payload"
 // @Success      201 {object} response.SuccessResponse{data=dto.RegisterResponse}
-// @Failure      400 {object} response.ErrorResponse{error=apperror.AppError} "BAD_REQUEST (malformed JSON) atau VALIDATION_ERROR (lihat field 'fields')"
+// @Failure      400 {object} response.ErrorResponse{error=apperror.AppError} "BAD_REQUEST / VALIDATION_ERROR"
 // @Failure      409 {object} response.ErrorResponse{error=apperror.AppError} "EMAIL_ALREADY_EXISTS"
 // @Failure      500 {object} response.ErrorResponse{error=apperror.AppError} "INTERNAL_SERVER_ERROR"
 // @Router       /auth/register [post]
@@ -73,7 +73,7 @@ func (h *authHandlerImpl) Register(ctx *gin.Context) {
 // @Produce      json
 // @Param        request body dto.LoginRequest true "Login payload"
 // @Success      200 {object} response.SuccessResponse{data=dto.LoginResponse}
-// @Failure      400 {object} response.ErrorResponse{error=apperror.AppError} "BAD_REQUEST atau VALIDATION_ERROR"
+// @Failure      400 {object} response.ErrorResponse{error=apperror.AppError} "BAD_REQUEST / VALIDATION_ERROR"
 // @Failure      401 {object} response.ErrorResponse{error=apperror.AppError} "INVALID_CREDENTIALS"
 // @Failure      500 {object} response.ErrorResponse{error=apperror.AppError} "INTERNAL_SERVER_ERROR"
 // @Router       /auth/login [post]

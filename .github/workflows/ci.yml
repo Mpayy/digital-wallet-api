@@ -21,13 +21,15 @@ jobs:
     - name: Run Go Vet
       run: go vet ./...
 
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v9
+      with:
+        version: v2.12
+
     - name: Test
       run: go test -v ./...
 
     - name: Build
       run: go build -v ./...
 
-    - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v9
-      with:
-        version: v2.12
+
