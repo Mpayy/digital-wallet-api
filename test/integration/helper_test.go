@@ -35,7 +35,7 @@ func setupIntegrationDB(t *testing.T) *gorm.DB {
 	sqlDB, err := db.DB()
 	require.NoError(t, err)
 
-	sqlDB.SetMaxOpenConns(50)
+	sqlDB.SetMaxOpenConns(10)
 	sqlDB.SetMaxIdleConns(25)
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 
