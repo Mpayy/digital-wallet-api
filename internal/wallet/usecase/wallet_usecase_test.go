@@ -415,7 +415,7 @@ func TestWalletUsecase_Withdraw(t *testing.T) {
 	amount := int64(50000)
 	idemKey := "idemKey-123"
 
-	t.Run("1. Success - Saldo cukup -> Status PENDING & saldo terpotong", func(t *testing.T) {
+	t.Run("success_sufficient_balance_status_pending_balance_deducted", func(t *testing.T) {
 		usecase, walletRepo, transactionRepo, idemService := setupWalletUsecase(t)
 
 		balanceBefore := int64(100000)
@@ -467,7 +467,7 @@ func TestWalletUsecase_Withdraw(t *testing.T) {
 		assert.Equal(t, string(entity.TxStatusPending), result.Status)
 	})
 
-	t.Run("2. Error - Saldo kurang -> ErrInsufficientBalance & MarkFailed dipanggil", func(t *testing.T) {
+	t.Run("failed_insufficient_balance_ErrInsufficientBalance_and_MarkFailed_called", func(t *testing.T) {
 		usecase, walletRepo, _, idemService := setupWalletUsecase(t)
 
 		insufficientBalance := int64(30000) // Saldo (30rb) < Amount (50rb)
@@ -500,7 +500,7 @@ func TestWalletUsecase_Withdraw(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("3. Success - Idempotent Replay (Return Cached Response)", func(t *testing.T) {
+	t.Run("success_idempotent_replay_return_cached_response", func(t *testing.T) {
 		usecase, walletRepo, _, idemService := setupWalletUsecase(t)
 
 		cachedResponse := dto.WithdrawResponse{
@@ -541,7 +541,7 @@ func TestWalletUsecase_ReverseWithdrawal(t *testing.T) {
 	amount := int64(50000)
 	reason := "Xendit payout failed: INVALID_DESTINATION"
 
-	t.Run("1. Success - Saldo kembali & transaksi revert tercatat", func(t *testing.T) {
+	t.Run("success_balance_return_and_transaction_revert_recorded", func(t *testing.T) {
 		usecase, walletRepo, transactionRepo, _ := setupWalletUsecase(t)
 
 		balanceBefore := int64(20000)
@@ -578,12 +578,23 @@ func TestWalletUsecase_ReverseWithdrawal(t *testing.T) {
 			return w != nil && w.ID == walletID && w.Balance == balanceAfter
 		})).Return(nil)
 
+		transactionRepo.EXPECT().Create(mock.Anything, mock.MatchedBy(func(tx *entity.Transaction) bool {
+			return tx != nil &&
+				tx.WalletID == walletID &&
+				tx.Type == entity.TxTypeWithdrawalRevert &&
+				tx.Amount == amount &&
+				tx.BalanceBefore == balanceBefore &&
+				tx.BalanceAfter == balanceAfter &&
+				tx.TransferID == nil &&
+				tx.Status == entity.TxStatusSuccess
+		})).Return(nil)
+
 		err := usecase.ReverseWithdrawal(ctx, transactionID, reason)
 
 		assert.NoError(t, err)
 	})
 
-	t.Run("2. Error - Status transaksi bukan PENDING (Cegah Double Refund)", func(t *testing.T) {
+	t.Run("failed_transaction_status_not_pending_prevent_double_refund", func(t *testing.T) {
 		usecase, _, transactionRepo, _ := setupWalletUsecase(t)
 
 		alreadyProcessedTx := &entity.Transaction{
@@ -603,7 +614,7 @@ func TestWalletUsecase_ReverseWithdrawal(t *testing.T) {
 		assert.ErrorIs(t, err, apperror.ErrTransactionAlreadyReversed)
 	})
 
-	t.Run("3. Error - Tipe transaksi bukan Withdrawal", func(t *testing.T) {
+	t.Run("failed_transaction_type_not_withdrawal", func(t *testing.T) {
 		usecase, _, transactionRepo, _ := setupWalletUsecase(t)
 
 		topupTx := &entity.Transaction{
@@ -622,7 +633,7 @@ func TestWalletUsecase_ReverseWithdrawal(t *testing.T) {
 		assert.ErrorIs(t, err, apperror.ErrInvalidTransactionType)
 	})
 
-	t.Run("4. Error - Transaksi tidak ditemukan", func(t *testing.T) {
+	t.Run("failed_transaction_not_found", func(t *testing.T) {
 		usecase, _, transactionRepo, _ := setupWalletUsecase(t)
 
 		transactionRepo.EXPECT().FindByID(mock.Anything, transactionID).
@@ -634,7 +645,7 @@ func TestWalletUsecase_ReverseWithdrawal(t *testing.T) {
 		assert.True(t, errors.Is(err, apperror.ErrTransactionNotFound))
 	})
 
-	t.Run("5. Error - Transaksi 0/minus", func(t *testing.T) {
+	t.Run("failed_transaction_zero_amount", func(t *testing.T) {
 		usecase, _, transactionRepo, _ := setupWalletUsecase(t)
 
 		zeroAmountTx := &entity.Transaction{
@@ -650,7 +661,26 @@ func TestWalletUsecase_ReverseWithdrawal(t *testing.T) {
 		err := usecase.ReverseWithdrawal(ctx, transactionID, reason)
 
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, apperror.ErrInvalidAmount)
+		assert.Contains(t, err.Error(), "has invalid amount")
+	})
+
+	t.Run("failed_already_resolved", func(t *testing.T) {
+		usecase, walletRepo, transactionRepo, _ := setupWalletUsecase(t)
+
+		transactionRepo.EXPECT().FindByID(mock.Anything, transactionID).Return(&entity.Transaction{
+			Type: entity.TxTypeWithdrawal, Status: entity.TxStatusPending, Amount: 50000,
+		}, nil)
+
+		walletRepo.EXPECT().WithTx(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error) error {
+				return fn(nil)
+			})
+
+		transactionRepo.EXPECT().UpdateStatus(mock.Anything, transactionID, entity.TxStatusFailed).
+			Return(apperror.ErrRecordNotFound)
+
+		err := usecase.ReverseWithdrawal(ctx, transactionID, "reason")
+		assert.ErrorIs(t, err, apperror.ErrTransactionAlreadyReversed)
 	})
 }
 
@@ -658,7 +688,7 @@ func TestWalletUsecase_FinalizeWithdrawal(t *testing.T) {
 	ctx := context.Background()
 	transactionID := uint(100)
 
-	t.Run("1. Success - Status transaksi berhasil diupdate ke SUCCESS", func(t *testing.T) {
+	t.Run("success_status_transaction_update_to_success", func(t *testing.T) {
 		usecase, walletRepo, transactionRepo, _ := setupWalletUsecase(t)
 
 		walletRepo.EXPECT().WithTx(mock.Anything, mock.Anything).
@@ -675,7 +705,7 @@ func TestWalletUsecase_FinalizeWithdrawal(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("2. Error - Gagal update status di database", func(t *testing.T) {
+	t.Run("failed_update_status_in_database", func(t *testing.T) {
 		usecase, walletRepo, transactionRepo, _ := setupWalletUsecase(t)
 
 		dbErr := errors.New("database connection failure")
@@ -695,7 +725,7 @@ func TestWalletUsecase_FinalizeWithdrawal(t *testing.T) {
 		assert.ErrorIs(t, err, dbErr)
 	})
 
-	t.Run("3. Error - Gagal update status transaksi tidak di temukan", func(t *testing.T) {
+	t.Run("failed_update_status_transaction_not_found", func(t *testing.T) {
 		usecase, walletRepo, transactionRepo, _ := setupWalletUsecase(t)
 
 		walletRepo.EXPECT().WithTx(mock.Anything, mock.Anything).

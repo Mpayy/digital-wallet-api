@@ -17,11 +17,11 @@ func NewGorm(config *viper.Viper, log *logrus.Logger) *gorm.DB {
 	password := config.GetString("DATABASE_PASSWORD")
 	host := config.GetString("DATABASE_HOST")
 	port := config.GetInt("DATABASE_PORT")
-	log.Printf("DEBUG CONFIG -> Host: %s, Port: %d", host, port)
 	database := config.GetString("DATABASE_NAME")
+	sslmode := config.GetString("DATABASE_SSLMODE")
 
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
-		host, username, password, database, port)
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
+		host, username, password, database, port, sslmode)
 
 	var db *gorm.DB
 	var sqlDB *sql.DB

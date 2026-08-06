@@ -322,7 +322,7 @@ func (u *walletUsecaseImpl) ReverseWithdrawal(ctx context.Context, transactionID
 	}
 
 	if transaction.Amount <= 0 {
-		return apperror.ErrInvalidAmount
+		return fmt.Errorf("transaction %d has invalid amount %d, refusing to reverse", transactionID, transaction.Amount)
 	}
 
 	txErr := u.walletRepo.WithTx(ctx, func(tx *gorm.DB) error {
@@ -331,7 +331,7 @@ func (u *walletUsecaseImpl) ReverseWithdrawal(ctx context.Context, transactionID
 			if errors.Is(err, apperror.ErrRecordNotFound) {
 				return apperror.ErrTransactionAlreadyReversed
 			}
-			return fmt.Errorf("update transaction: %w", err)
+			return fmt.Errorf("update original transaction status: %w", err)
 		}
 
 		locked, err := u.walletRepo.LockByID(tx, transaction.WalletID)
@@ -342,11 +342,26 @@ func (u *walletUsecaseImpl) ReverseWithdrawal(ctx context.Context, transactionID
 			return fmt.Errorf("lock wallet: %w", err)
 		}
 
+		balanceBefore := locked.Balance
 		locked.Balance += transaction.Amount
 
 		err = u.walletRepo.Save(tx, locked)
 		if err != nil {
 			return fmt.Errorf("save wallet: %w", err)
+		}
+
+		reversalTx := &entity.Transaction{
+			WalletID:      locked.ID,
+			Type:          entity.TxTypeWithdrawalRevert,
+			Amount:        transaction.Amount,
+			BalanceBefore: balanceBefore,
+			BalanceAfter:  locked.Balance,
+			Status:        entity.TxStatusSuccess,
+		}
+
+		err = u.transactionRepo.Create(tx, reversalTx)
+		if err != nil {
+			return fmt.Errorf("create reversal transaction: %w", err)
 		}
 
 		return nil

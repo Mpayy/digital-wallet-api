@@ -12,3 +12,5 @@ CREATE TABLE payment_transactions (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT uq_payment_provider_ref UNIQUE (provider, provider_ref_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_payment_transactions_user_id ON payment_transactions(user_id);

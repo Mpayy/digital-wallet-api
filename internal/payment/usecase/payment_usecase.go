@@ -121,9 +121,6 @@ func (p *paymentUsecaseImpl) CreateTopUpCheckout(ctx context.Context, userID uin
 		if markErr != nil {
 			logger.WithError(markErr).Error("failed to mark idempotency key as failed")
 		}
-		if errors.Is(err, apperror.ErrDuplicatedKey) {
-			return nil, apperror.ErrDuplicatePayment
-		}
 		return nil, fmt.Errorf("save payment transaction: %w", err)
 	}
 
