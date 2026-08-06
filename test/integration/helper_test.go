@@ -27,7 +27,7 @@ import (
 func setupIntegrationDB(t *testing.T) *gorm.DB {
 	dsn := os.Getenv("TEST_DB_DSN")
 	if dsn == "" {
-		dsn = "host=localhost user=postgres password=postgres dbname=digital_wallet_test port=5433 sslmode=disable"
+		dsn = "host=127.0.0.1 user=postgres password=postgres dbname=digital_wallet_test port=5433 sslmode=disable"
 	}
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{TranslateError: true})
 	require.NoError(t, err)
@@ -35,9 +35,13 @@ func setupIntegrationDB(t *testing.T) *gorm.DB {
 	sqlDB, err := db.DB()
 	require.NoError(t, err)
 
-	sqlDB.SetMaxOpenConns(10)
-	sqlDB.SetMaxIdleConns(25)
+	// sqlDB.SetMaxOpenConns(10)
+	// sqlDB.SetMaxIdleConns(25)
+	// sqlDB.SetConnMaxLifetime(5 * time.Minute)
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+	sqlDB.SetConnMaxIdleTime(1 * time.Minute)
 
 	t.Cleanup(func() {
 		err := db.Exec(`
