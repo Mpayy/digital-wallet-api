@@ -2,13 +2,12 @@
 .gitignore
 .env
 .env.*
-main
 *.exe
 *_test.go
+docker-compose*.yml
+test/
 coverage.out
-
-README.md
-CHANGELOG.md
+*.md
 Makefile
 
 .idea/
