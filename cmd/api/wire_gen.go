@@ -18,6 +18,7 @@ import (
 	usecase3 "github.com/Mpayy/digital-wallet-api/internal/payment/usecase"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
 	middleware2 "github.com/Mpayy/digital-wallet-api/internal/pkg/middleware"
+	"github.com/Mpayy/digital-wallet-api/internal/pkg/queue"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/handler"
 	repository2 "github.com/Mpayy/digital-wallet-api/internal/wallet/repository"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
@@ -30,7 +31,7 @@ import (
 
 // Injectors from wire.go:
 
-func InitializeAPI() *Application {
+func InitializeAPI() (*Application, error) {
 	viper := config.NewViper()
 	engine := config.NewGin(viper)
 	logger := config.NewLogrus(viper)
@@ -56,7 +57,12 @@ func InitializeAPI() *Application {
 	jwtMiddleware := middleware.NewJwtMiddleware(jwtToken, authRedisRepository, logger)
 	paymentRepository := repository3.NewPaymentRepository(db)
 	paymentCollector := gateway.NewMidtransGateway(viper)
-	paymentUsecase := usecase3.NewPaymentUsecase(paymentRepository, paymentCollector, walletUsecase, idempotencyService, logger)
+	channel, err := config.NewRabbitMQ(viper)
+	if err != nil {
+		return nil, err
+	}
+	publisher := queue.NewPublisher(channel)
+	paymentUsecase := usecase3.NewPaymentUsecase(paymentRepository, paymentCollector, walletUsecase, idempotencyService, logger, publisher)
 	paymentHandler := handler2.NewPaymentHandler(paymentUsecase, validate)
 	paymentDisburser := gateway.NewXenditGateway(viper)
 	withdrawalUsecase := usecase3.NewWithdrawalUsecase(paymentRepository, paymentDisburser, walletUsecase, logger)
@@ -64,7 +70,7 @@ func InitializeAPI() *Application {
 	webhookHandler := handler2.NewWebhookHandler(paymentUsecase, withdrawalUsecase)
 	router := NewRouter(engine, logger, authHandler, walletHandler, transactionHandler, jwtMiddleware, paymentHandler, withdrawalHandler, webhookHandler)
 	application := NewApplication(app, router)
-	return application
+	return application, nil
 }
 
 // wire.go:
@@ -83,6 +89,6 @@ var paymentSet = wire.NewSet(repository3.NewPaymentRepository, usecase3.NewPayme
 
 var middlewareSet = wire.NewSet(middleware.NewJwtMiddleware, middleware2.LoggerMiddleware)
 
-var infraSet = wire.NewSet(config.NewViper, config.NewValidator, config.NewRedisClient, config.NewLogrus, config.NewGorm, config.NewGin, config.NewApp)
+var infraSet = wire.NewSet(config.NewViper, config.NewValidator, config.NewRedisClient, config.NewLogrus, config.NewGorm, config.NewGin, config.NewApp, config.NewRabbitMQ)
 
-var pkgSet = wire.NewSet(jwt.NewJwtToken)
+var pkgSet = wire.NewSet(jwt.NewJwtToken, queue.NewPublisher)

@@ -30,7 +30,8 @@ type WebhookEvent struct {
 //mockery:filename: ../mocks/mock_payment_collector.go
 type PaymentCollector interface {
 	CreateCharge(ctx context.Context, req ChargeRequest) (*ChargeResult, error)
-	VerifyAndParseWebhook(payload []byte) (*WebhookEvent, error)
+	VerifyWebhookSignature(payload []byte) error
+	ParseWebhookPayload(payload []byte) (*WebhookEvent, error)
 }
 
 type PayoutRequest struct {

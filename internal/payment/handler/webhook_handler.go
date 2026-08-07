@@ -58,7 +58,7 @@ func (h *webhookHandlerImpl) MidtransNotification(ctx *gin.Context) {
 		return
 	}
 
-	err = h.paymentUsecase.HandleWebhook(ctx.Request.Context(), rawPayload)
+	err = h.paymentUsecase.ReceiveWebhook(ctx.Request.Context(), rawPayload)
 	if err != nil {
 		response.Handle(ctx, err)
 		return

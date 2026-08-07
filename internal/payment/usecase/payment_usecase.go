@@ -12,6 +12,7 @@ import (
 	"github.com/Mpayy/digital-wallet-api/internal/payment/gateway"
 	"github.com/Mpayy/digital-wallet-api/internal/payment/repository"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
+	"github.com/Mpayy/digital-wallet-api/internal/pkg/queue"
 	walletdto "github.com/Mpayy/digital-wallet-api/internal/wallet/dto"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -36,6 +37,7 @@ type WalletTopUpper interface {
 type PaymentUsecase interface {
 	CreateTopUpCheckout(ctx context.Context, userID uint, amount int64, idemKey string) (*dto.CheckoutResponse, error)
 	HandleWebhook(ctx context.Context, payload []byte) error
+	ReceiveWebhook(ctx context.Context, payload []byte) error
 }
 
 type paymentUsecaseImpl struct {
@@ -44,6 +46,7 @@ type paymentUsecaseImpl struct {
 	walletTopUpper     WalletTopUpper
 	idempotencyClaimer IdempotencyClaimer
 	log                *logrus.Logger
+	publisher          queue.Publisher
 }
 
 func NewPaymentUsecase(
@@ -52,6 +55,7 @@ func NewPaymentUsecase(
 	walletTopUpper WalletTopUpper,
 	idempotencyClaimer IdempotencyClaimer,
 	log *logrus.Logger,
+	publisher queue.Publisher,
 ) PaymentUsecase {
 	return &paymentUsecaseImpl{
 		paymentRepo:        paymentRepo,
@@ -59,6 +63,7 @@ func NewPaymentUsecase(
 		walletTopUpper:     walletTopUpper,
 		idempotencyClaimer: idempotencyClaimer,
 		log:                log,
+		publisher:          publisher,
 	}
 }
 
@@ -140,12 +145,8 @@ func (p *paymentUsecaseImpl) CreateTopUpCheckout(ctx context.Context, userID uin
 }
 
 func (p *paymentUsecaseImpl) HandleWebhook(ctx context.Context, payload []byte) error {
-	event, err := p.gateway.VerifyAndParseWebhook(payload)
+	event, err := p.gateway.ParseWebhookPayload(payload)
 	if err != nil {
-		p.log.WithError(err).Warn("webhook signature verification failed")
-		if errors.Is(err, apperror.ErrInvalidWebhookSignature) {
-			return err
-		}
 		return fmt.Errorf("parse webhook payload: %w", err)
 	}
 
@@ -201,5 +202,15 @@ func (p *paymentUsecaseImpl) HandleWebhook(ctx context.Context, payload []byte) 
 	logger.WithFields(logrus.Fields{
 		"user_id": record.UserID, "amount": record.Amount, "wallet_transaction_id": topupResp.TransactionID,
 	}).Info("topup completed via webhook")
+	return nil
+}
+
+func (p *paymentUsecaseImpl) ReceiveWebhook(ctx context.Context, payload []byte) error {
+	if err := p.gateway.VerifyWebhookSignature(payload); err != nil {
+		return apperror.ErrInvalidWebhookSignature
+	}
+	if err := p.publisher.Publish(ctx, queue.MidtransWebhookQueue, payload); err != nil {
+		return fmt.Errorf("publish webhook message: %w", err)
+	}
 	return nil
 }

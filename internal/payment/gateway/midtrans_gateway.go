@@ -53,11 +53,11 @@ func (m *midtransGateway) CreateCharge(ctx context.Context, req ChargeRequest) (
 	}, nil
 }
 
-func (m *midtransGateway) VerifyAndParseWebhook(payload []byte) (*WebhookEvent, error) {
+func (m *midtransGateway) VerifyWebhookSignature(payload []byte) error {
 	var notif dto.MidtransWebhookPayload
 	err := json.Unmarshal(payload, &notif)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal webhook payload: %w", err)
+		return fmt.Errorf("unmarshal webhook payload: %w", err)
 	}
 
 	// Rumus Resmi Midtrans: SHA512(order_id + status_code + gross_amount + ServerKey)
@@ -68,7 +68,17 @@ func (m *midtransGateway) VerifyAndParseWebhook(payload []byte) (*WebhookEvent, 
 	generatedSignature := hex.EncodeToString(hash.Sum(nil))
 
 	if generatedSignature != notif.SignatureKey {
-		return nil, apperror.ErrInvalidWebhookSignature
+		return apperror.ErrInvalidWebhookSignature
+	}
+
+	return nil
+}
+
+func (m *midtransGateway) ParseWebhookPayload(payload []byte) (*WebhookEvent, error) {
+	var notif dto.MidtransWebhookPayload
+	err := json.Unmarshal(payload, &notif)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal webhook payload: %w", err)
 	}
 
 	var normalizedStatus string
