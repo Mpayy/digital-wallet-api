@@ -15,6 +15,7 @@ import (
 	paymentUsecase "github.com/Mpayy/digital-wallet-api/internal/payment/usecase"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/jwt"
 	loggerMiddleware "github.com/Mpayy/digital-wallet-api/internal/pkg/middleware"
+	"github.com/Mpayy/digital-wallet-api/internal/pkg/queue"
 	walletHandler "github.com/Mpayy/digital-wallet-api/internal/wallet/handler"
 	walletRepo "github.com/Mpayy/digital-wallet-api/internal/wallet/repository"
 	walletUsecase "github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
@@ -78,13 +79,15 @@ var infraSet = wire.NewSet(
 	config.NewGorm,
 	config.NewGin,
 	config.NewApp,
+	config.NewRabbitMQ,
 )
 
 var pkgSet = wire.NewSet(
 	jwt.NewJwtToken,
+	queue.NewPublisher,
 )
 
-func InitializeAPI() *Application {
+func InitializeAPI() (*Application, error) {
 	wire.Build(
 		infraSet,
 		authSet,
@@ -98,5 +101,5 @@ func InitializeAPI() *Application {
 		NewRouter,
 		NewApplication,
 	)
-	return nil
+	return nil, nil
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,7 +23,11 @@ import (
 // @contact.url                https://github.com/Mpayy
 // @license.name               MIT
 func main() {
-	application := InitializeAPI()
+	application, err := InitializeAPI()
+	if err != nil {
+		log.Fatalf("Failed to initialize API: %v", err)
+	}
+
 	app := application.App
 	router := application.Router
 

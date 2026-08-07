@@ -106,12 +106,12 @@ func (_c *MockPaymentCollector_CreateCharge_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
-// VerifyAndParseWebhook provides a mock function for the type MockPaymentCollector
-func (_mock *MockPaymentCollector) VerifyAndParseWebhook(payload []byte) (*gateway.WebhookEvent, error) {
+// ParseWebhookPayload provides a mock function for the type MockPaymentCollector
+func (_mock *MockPaymentCollector) ParseWebhookPayload(payload []byte) (*gateway.WebhookEvent, error) {
 	ret := _mock.Called(payload)
 
 	if len(ret) == 0 {
-		panic("no return value specified for VerifyAndParseWebhook")
+		panic("no return value specified for ParseWebhookPayload")
 	}
 
 	var r0 *gateway.WebhookEvent
@@ -134,18 +134,18 @@ func (_mock *MockPaymentCollector) VerifyAndParseWebhook(payload []byte) (*gatew
 	return r0, r1
 }
 
-// MockPaymentCollector_VerifyAndParseWebhook_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'VerifyAndParseWebhook'
-type MockPaymentCollector_VerifyAndParseWebhook_Call struct {
+// MockPaymentCollector_ParseWebhookPayload_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ParseWebhookPayload'
+type MockPaymentCollector_ParseWebhookPayload_Call struct {
 	*mock.Call
 }
 
-// VerifyAndParseWebhook is a helper method to define mock.On call
+// ParseWebhookPayload is a helper method to define mock.On call
 //   - payload []byte
-func (_e *MockPaymentCollector_Expecter) VerifyAndParseWebhook(payload any) *MockPaymentCollector_VerifyAndParseWebhook_Call {
-	return &MockPaymentCollector_VerifyAndParseWebhook_Call{Call: _e.mock.On("VerifyAndParseWebhook", payload)}
+func (_e *MockPaymentCollector_Expecter) ParseWebhookPayload(payload any) *MockPaymentCollector_ParseWebhookPayload_Call {
+	return &MockPaymentCollector_ParseWebhookPayload_Call{Call: _e.mock.On("ParseWebhookPayload", payload)}
 }
 
-func (_c *MockPaymentCollector_VerifyAndParseWebhook_Call) Run(run func(payload []byte)) *MockPaymentCollector_VerifyAndParseWebhook_Call {
+func (_c *MockPaymentCollector_ParseWebhookPayload_Call) Run(run func(payload []byte)) *MockPaymentCollector_ParseWebhookPayload_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 []byte
 		if args[0] != nil {
@@ -158,12 +158,63 @@ func (_c *MockPaymentCollector_VerifyAndParseWebhook_Call) Run(run func(payload 
 	return _c
 }
 
-func (_c *MockPaymentCollector_VerifyAndParseWebhook_Call) Return(webhookEvent *gateway.WebhookEvent, err error) *MockPaymentCollector_VerifyAndParseWebhook_Call {
+func (_c *MockPaymentCollector_ParseWebhookPayload_Call) Return(webhookEvent *gateway.WebhookEvent, err error) *MockPaymentCollector_ParseWebhookPayload_Call {
 	_c.Call.Return(webhookEvent, err)
 	return _c
 }
 
-func (_c *MockPaymentCollector_VerifyAndParseWebhook_Call) RunAndReturn(run func(payload []byte) (*gateway.WebhookEvent, error)) *MockPaymentCollector_VerifyAndParseWebhook_Call {
+func (_c *MockPaymentCollector_ParseWebhookPayload_Call) RunAndReturn(run func(payload []byte) (*gateway.WebhookEvent, error)) *MockPaymentCollector_ParseWebhookPayload_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// VerifyWebhookSignature provides a mock function for the type MockPaymentCollector
+func (_mock *MockPaymentCollector) VerifyWebhookSignature(payload []byte) error {
+	ret := _mock.Called(payload)
+
+	if len(ret) == 0 {
+		panic("no return value specified for VerifyWebhookSignature")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func([]byte) error); ok {
+		r0 = returnFunc(payload)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockPaymentCollector_VerifyWebhookSignature_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'VerifyWebhookSignature'
+type MockPaymentCollector_VerifyWebhookSignature_Call struct {
+	*mock.Call
+}
+
+// VerifyWebhookSignature is a helper method to define mock.On call
+//   - payload []byte
+func (_e *MockPaymentCollector_Expecter) VerifyWebhookSignature(payload any) *MockPaymentCollector_VerifyWebhookSignature_Call {
+	return &MockPaymentCollector_VerifyWebhookSignature_Call{Call: _e.mock.On("VerifyWebhookSignature", payload)}
+}
+
+func (_c *MockPaymentCollector_VerifyWebhookSignature_Call) Run(run func(payload []byte)) *MockPaymentCollector_VerifyWebhookSignature_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 []byte
+		if args[0] != nil {
+			arg0 = args[0].([]byte)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockPaymentCollector_VerifyWebhookSignature_Call) Return(err error) *MockPaymentCollector_VerifyWebhookSignature_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockPaymentCollector_VerifyWebhookSignature_Call) RunAndReturn(run func(payload []byte) error) *MockPaymentCollector_VerifyWebhookSignature_Call {
 	_c.Call.Return(run)
 	return _c
 }

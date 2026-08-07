@@ -1,30 +1,66 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      target: api
 
     container_name: digital-wallet-api-app
     restart: unless-stopped
-    
+
     ports:
       - "8080:8080"
 
-    env_file:
-      - .env
+    env_file: [.env]
 
     environment:
-      - DATABASE_HOST=postgres 
-      - REDIS_HOST=redis
-      - DATABASE_PASSWORD=postgres
+      DATABASE_HOST: postgres 
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PASSWORD:
+      REDIS_TLS_ENABLED: false
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
 
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
     networks:
       - digital-wallet-api-network
 
+  worker:
+    build:
+      context: .
+      target: worker
+
+    container_name: digital-wallet-api-worker
+    restart: unless-stopped
+
+    env_file: [.env]
+
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_SSLMODE: disable
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+    networks:
+      - digital-wallet-api-network
+      
   postgres:
     image: postgres:16-alpine
 
@@ -74,10 +110,33 @@ services:
 
     networks:
       - digital-wallet-api-network
+  
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+
+    container_name: digital-wallet-api-rabbitmq
+    restart: unless-stopped
+
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - digital-wallet-api-network
 
 volumes:
   postgres_data:
-  redis_data:  
+  redis_data:
+  rabbitmq_data:
 
 networks:
   digital-wallet-api-network:

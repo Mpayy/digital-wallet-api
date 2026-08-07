@@ -18,7 +18,8 @@ import (
 func TestConcurrentCheckout_SameIdempotencyKey_OnlyOneChargeCreated(t *testing.T) {
 	db := setupIntegrationDB(t)
 	stubGW := &stubPaymentCollector{}
-	paymentUC := setupPaymentUsecase(t, db, stubGW) // sama pola: wiring repo real, gateway diganti stub
+	ch := setupRabbitMQ(t)
+	paymentUC := setupPaymentUsecase(t, db, stubGW, ch)
 
 	idemKey := uuid.NewString()
 	const goroutines = 15
