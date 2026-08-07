@@ -135,7 +135,7 @@ func setupPaymentUsecase(t *testing.T, db *gorm.DB, stubGW *stubPaymentCollector
 	walletUC := usecase.NewWalletUsecase(wRepo, txRepo, idemService, logger)
 
 	pRepo := paymentRepo.NewPaymentRepository(db)
-	pub := queue.NewPublisher(ch)
+	pub := queue.NewPublisher(ch, logger)
 
 	return paymentUC.NewPaymentUsecase(pRepo, stubGW, walletUC, idemService, logger, pub)
 }
