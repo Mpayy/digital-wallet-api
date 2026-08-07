@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/sirupsen/logrus"
 )
 
 const MidtransWebhookQueue = "midtrans.webhooks"
@@ -23,24 +24,39 @@ type Publisher interface {
 }
 
 type publisherConfig struct {
-	ch *amqp.Channel
+	ch  *amqp.Channel
+	log *logrus.Logger
 }
 
-func NewPublisher(ch *amqp.Channel) Publisher {
+func NewPublisher(ch *amqp.Channel, log *logrus.Logger) Publisher {
 	return &publisherConfig{
-		ch: ch,
+		ch:  ch,
+		log: log,
 	}
 }
 
 func (p *publisherConfig) Publish(ctx context.Context, queueName string, body []byte) error {
+	logger := p.log.WithFields(logrus.Fields{
+		"queue_name": queueName,
+	})
+
 	if _, err := declareQueue(p.ch, queueName); err != nil {
 		return fmt.Errorf("declare queue: %w", err)
 	}
-	return p.ch.PublishWithContext(ctx, "", queueName, false, false, amqp.Publishing{
+
+	err := p.ch.PublishWithContext(ctx, "", queueName, false, false, amqp.Publishing{
 		DeliveryMode: amqp.Persistent,
 		ContentType:  "application/json",
 		Body:         body,
 	})
+
+	if err != nil {
+		return fmt.Errorf("publish message to %s: %w", queueName, err)
+	}
+
+	logger.Debug("message published successfully")
+	return nil
+
 }
 
 //go:generate mockery
@@ -51,16 +67,22 @@ type Consumer interface {
 }
 
 type consumerConfig struct {
-	ch *amqp.Channel
+	ch  *amqp.Channel
+	log *logrus.Logger
 }
 
-func NewConsumer(ch *amqp.Channel) Consumer {
+func NewConsumer(ch *amqp.Channel, log *logrus.Logger) Consumer {
 	return &consumerConfig{
-		ch: ch,
+		ch:  ch,
+		log: log,
 	}
 }
 
 func (c *consumerConfig) Consume(ctx context.Context, queueName string, handler func(body []byte) error) error {
+	logger := c.log.WithFields(logrus.Fields{
+		"queue_name": queueName,
+	})
+
 	if _, err := declareQueue(c.ch, queueName); err != nil {
 		return fmt.Errorf("declare queue: %w", err)
 	}
@@ -74,18 +96,35 @@ func (c *consumerConfig) Consume(ctx context.Context, queueName string, handler 
 		return err
 	}
 
+	logger.Info("rabbitmq consumer started")
+	defer logger.Info("rabbitmq consumer stopped")
+
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err() // sinyal shutdown (SIGTERM) -> keluar bersih
+			logger.Info("stopping consumer due to context cancellation")
+			return ctx.Err()
 		case msg, ok := <-msgs:
 			if !ok {
 				return fmt.Errorf("rabbitmq delivery channel closed unexpectedly")
 			}
+
+			msgLogger := logger.WithFields(logrus.Fields{
+				"msg_id":      msg.MessageId,
+				"routing_key": msg.RoutingKey,
+			})
+			msgLogger.Debug("received message from queue")
+
 			if err := handler(msg.Body); err != nil {
-				msg.Nack(false, true) // lihat catatan di bawah soal requeue
+				msgLogger.WithError(err).Error("failed to process message, re-queueing")
+				if nackErr := msg.Nack(false, true); nackErr != nil {
+					msgLogger.WithError(nackErr).Error("failed to nack message")
+				}
 			} else {
-				msg.Ack(false)
+				msgLogger.Debug("message processed successfully, acking")
+				if ackErr := msg.Ack(false); ackErr != nil {
+					msgLogger.WithError(ackErr).Error("failed to ack message")
+				}
 			}
 		}
 	}

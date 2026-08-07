@@ -61,7 +61,7 @@ func InitializeAPI() (*Application, error) {
 	if err != nil {
 		return nil, err
 	}
-	publisher := queue.NewPublisher(channel)
+	publisher := queue.NewPublisher(channel, logger)
 	paymentUsecase := usecase3.NewPaymentUsecase(paymentRepository, paymentCollector, walletUsecase, idempotencyService, logger, publisher)
 	paymentHandler := handler2.NewPaymentHandler(paymentUsecase, validate)
 	paymentDisburser := gateway.NewXenditGateway(viper)

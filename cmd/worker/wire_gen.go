@@ -25,8 +25,8 @@ func InitializeWorker() (*Worker, error) {
 	if err != nil {
 		return nil, err
 	}
-	consumer := queue.NewConsumer(channel)
 	logger := config.NewLogrus(viper)
+	consumer := queue.NewConsumer(channel, logger)
 	db := config.NewGorm(viper, logger)
 	paymentRepository := repository.NewPaymentRepository(db)
 	paymentCollector := gateway.NewMidtransGateway(viper)
@@ -35,7 +35,7 @@ func InitializeWorker() (*Worker, error) {
 	idempotencyRepository := repository2.NewIdempotencyRepository(db)
 	idempotencyService := usecase.NewIdempotencyService(logger, idempotencyRepository)
 	walletUsecase := usecase.NewWalletUsecase(walletRepository, transactionRepository, idempotencyService, logger)
-	publisher := queue.NewPublisher(channel)
+	publisher := queue.NewPublisher(channel, logger)
 	paymentUsecase := usecase2.NewPaymentUsecase(paymentRepository, paymentCollector, walletUsecase, idempotencyService, logger, publisher)
 	worker := NewWorker(consumer, paymentUsecase)
 	return worker, nil
