@@ -99,7 +99,7 @@ func (h *webhookHandlerImpl) XenditNotification(ctx *gin.Context) {
 		return
 	}
 
-	if err := h.withdrawalUsecase.HandlePayoutWebhook(ctx.Request.Context(), rawPayload, ctx.Request.Header); err != nil {
+	if err := h.withdrawalUsecase.ReceivePayoutWebhook(ctx.Request.Context(), ctx.Request.Header, rawPayload); err != nil {
 		response.Handle(ctx, err)
 		return
 	}

@@ -125,7 +125,7 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
 
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping && nc -z 127.0.0.1 5672"]
       interval: 5s
       timeout: 5s
       retries: 10

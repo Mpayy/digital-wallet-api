@@ -31,13 +31,19 @@ import (
 
 // Injectors from wire.go:
 
-func InitializeAPI() (*Application, error) {
+func InitializeAPI() (*ApplicationApi, func(), error) {
 	viper := config.NewViper()
 	engine := config.NewGin(viper)
 	logger := config.NewLogrus(viper)
-	db := config.NewGorm(viper, logger)
-	client := config.NewRedisClient(viper)
-	app := config.NewApp(engine, logger, viper, db, client)
+	db, cleanup := config.NewGorm(viper, logger)
+	client, cleanup2 := config.NewRedisClient(viper, logger)
+	channel, cleanup3, err := config.NewRabbitMQ(viper, logger)
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	appInfra := config.NewApp(engine, logger, viper, db, client, channel)
 	authRepository := repository.NewAuthRepository(db)
 	authRedisRepository := repository.NewAuthRedisRepository(client)
 	walletRepository := repository2.NewWalletRepository(db)
@@ -57,20 +63,20 @@ func InitializeAPI() (*Application, error) {
 	jwtMiddleware := middleware.NewJwtMiddleware(jwtToken, authRedisRepository, logger)
 	paymentRepository := repository3.NewPaymentRepository(db)
 	paymentCollector := gateway.NewMidtransGateway(viper)
-	channel, err := config.NewRabbitMQ(viper)
-	if err != nil {
-		return nil, err
-	}
 	publisher := queue.NewPublisher(channel, logger)
 	paymentUsecase := usecase3.NewPaymentUsecase(paymentRepository, paymentCollector, walletUsecase, idempotencyService, logger, publisher)
 	paymentHandler := handler2.NewPaymentHandler(paymentUsecase, validate)
 	paymentDisburser := gateway.NewXenditGateway(viper)
-	withdrawalUsecase := usecase3.NewWithdrawalUsecase(paymentRepository, paymentDisburser, walletUsecase, logger)
+	withdrawalUsecase := usecase3.NewWithdrawalUsecase(paymentRepository, paymentDisburser, walletUsecase, publisher, logger)
 	withdrawalHandler := handler2.NewWithdrawalHandler(withdrawalUsecase, validate)
 	webhookHandler := handler2.NewWebhookHandler(paymentUsecase, withdrawalUsecase)
 	router := NewRouter(engine, logger, authHandler, walletHandler, transactionHandler, jwtMiddleware, paymentHandler, withdrawalHandler, webhookHandler)
-	application := NewApplication(app, router)
-	return application, nil
+	applicationApi := NewApplicationApi(appInfra, router)
+	return applicationApi, func() {
+		cleanup3()
+		cleanup2()
+		cleanup()
+	}, nil
 }
 
 // wire.go:

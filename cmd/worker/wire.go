@@ -20,6 +20,7 @@ var infraSet = wire.NewSet(
 	config.NewLogrus,
 	config.NewGorm,
 	config.NewRabbitMQ,
+	config.NewWorker,
 )
 
 var walletSet = wire.NewSet(
@@ -29,13 +30,16 @@ var walletSet = wire.NewSet(
 	walletUsecase.NewIdempotencyService,
 	walletUsecase.NewWalletUsecase,
 	wire.Bind(new(paymentUsecase.WalletTopUpper), new(walletUsecase.WalletUsecase)),
+	wire.Bind(new(paymentUsecase.WalletWithdrawer), new(walletUsecase.WalletUsecase)),
 	wire.Bind(new(paymentUsecase.IdempotencyClaimer), new(walletUsecase.IdempotencyService)),
 )
 
 var paymentSet = wire.NewSet(
 	paymentRepo.NewPaymentRepository,
 	gateway.NewMidtransGateway,
+	gateway.NewXenditGateway,
 	paymentUsecase.NewPaymentUsecase,
+	paymentUsecase.NewWithdrawalUsecase,
 )
 
 var pkgSet = wire.NewSet(
@@ -43,13 +47,14 @@ var pkgSet = wire.NewSet(
 	queue.NewConsumer,
 )
 
-func InitializeWorker() (*Worker, error) {
+func InitializeWorker() (*ApplicationWorker, func(), error) {
 	wire.Build(
 		infraSet,
 		walletSet,
 		paymentSet,
 		pkgSet,
 		NewWorker,
+		NewApplicationWorker,
 	)
-	return nil, nil
+	return nil, nil, nil
 }

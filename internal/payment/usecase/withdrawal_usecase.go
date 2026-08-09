@@ -11,6 +11,7 @@ import (
 	"github.com/Mpayy/digital-wallet-api/internal/payment/gateway"
 	"github.com/Mpayy/digital-wallet-api/internal/payment/repository"
 	"github.com/Mpayy/digital-wallet-api/internal/pkg/apperror"
+	"github.com/Mpayy/digital-wallet-api/internal/pkg/queue"
 	walletdto "github.com/Mpayy/digital-wallet-api/internal/wallet/dto"
 	"github.com/sirupsen/logrus"
 )
@@ -26,21 +27,24 @@ type WalletWithdrawer interface {
 
 type WithdrawalUsecase interface {
 	CreateWithdrawal(ctx context.Context, userID uint, req dto.WithdrawalRequest, idemKey string) (*dto.WithdrawalResponse, error)
-	HandlePayoutWebhook(ctx context.Context, payload []byte, headers http.Header) error
+	HandlePayoutWebhook(ctx context.Context, payload []byte) error
+	ReceivePayoutWebhook(ctx context.Context, headers http.Header, payload []byte) error
 }
 
 type withdrawalUsecaseImpl struct {
 	paymentRepo      repository.PaymentRepository
 	gateway          gateway.PaymentDisburser
 	walletWithdrawal WalletWithdrawer
+	publisher        queue.Publisher
 	log              *logrus.Logger
 }
 
-func NewWithdrawalUsecase(paymentRepo repository.PaymentRepository, gateway gateway.PaymentDisburser, walletWithdrawal WalletWithdrawer, log *logrus.Logger) WithdrawalUsecase {
+func NewWithdrawalUsecase(paymentRepo repository.PaymentRepository, gateway gateway.PaymentDisburser, walletWithdrawal WalletWithdrawer, publisher queue.Publisher, log *logrus.Logger) WithdrawalUsecase {
 	return &withdrawalUsecaseImpl{
 		paymentRepo:      paymentRepo,
 		gateway:          gateway,
 		walletWithdrawal: walletWithdrawal,
+		publisher:        publisher,
 		log:              log,
 	}
 }
@@ -57,8 +61,9 @@ func (w *withdrawalUsecaseImpl) CreateWithdrawal(ctx context.Context, userID uin
 		return nil, err
 	}
 
+	orderID := fmt.Sprintf("WITHDRAWAL-%d-%d", withdrawRes.TransactionID, withdrawRes.CreatedAt.Unix())
 	payoutReq := gateway.PayoutRequest{
-		ReferenceID:       fmt.Sprintf("WITHDRAWAL-%d", withdrawRes.TransactionID),
+		ReferenceID:       orderID,
 		ChannelCode:       req.ChannelCode,
 		AccountNumber:     req.AccountNumber,
 		AccountHolderName: req.AccountHolderName,
@@ -84,7 +89,7 @@ func (w *withdrawalUsecaseImpl) CreateWithdrawal(ctx context.Context, userID uin
 		UserID:              userID,
 		Type:                withdrawRes.Type,
 		Amount:              req.Amount,
-		Status:              entity.PaymentTransactionStatus(withdrawRes.Status),
+		Status:              entity.PaymentTransactionStatusPending,
 		WalletTransactionID: &withdrawRes.TransactionID,
 	}
 
@@ -92,13 +97,14 @@ func (w *withdrawalUsecaseImpl) CreateWithdrawal(ctx context.Context, userID uin
 	if err != nil {
 		if errors.Is(err, apperror.ErrDuplicatedKey) {
 			logger.Debug("payment transaction record already exists for this reference — idempotent replay")
+		} else {
+			logger.WithFields(logrus.Fields{
+				"provider_ref_id":       result.ProviderRefID,
+				"wallet_transaction_id": withdrawRes.TransactionID,
+				"amount":                req.Amount,
+				"error":                 err,
+			}).Error("CRITICAL: xendit payout created but payment_transaction record failed to save — webhook for this payout will have nowhere to land, requires manual reconciliation")
 		}
-		logger.WithFields(logrus.Fields{
-			"provider_ref_id":       result.ProviderRefID,
-			"wallet_transaction_id": withdrawRes.TransactionID,
-			"amount":                req.Amount,
-			"error":                 err,
-		}).Error("CRITICAL: xendit payout created but payment_transaction record failed to save — webhook for this payout will have nowhere to land, requires manual reconciliation")
 	}
 
 	return &dto.WithdrawalResponse{
@@ -116,13 +122,7 @@ func (w *withdrawalUsecaseImpl) CreateWithdrawal(ctx context.Context, userID uin
 	}, nil
 }
 
-func (w *withdrawalUsecaseImpl) HandlePayoutWebhook(ctx context.Context, payload []byte, headers http.Header) error {
-	err := w.gateway.VerifyWebhookSignature(headers)
-	if err != nil {
-		w.log.WithError(err).Warn("xendit webhook signature verification failed")
-		return apperror.ErrInvalidWebhookSignature
-	}
-
+func (w *withdrawalUsecaseImpl) HandlePayoutWebhook(ctx context.Context, payload []byte) error {
 	event, err := w.gateway.ParsePayoutWebhook(payload)
 	if err != nil {
 		return fmt.Errorf("parse payout webhook payload: %w", err)
@@ -166,7 +166,7 @@ func (w *withdrawalUsecaseImpl) HandlePayoutWebhook(ctx context.Context, payload
 		}
 		err = w.paymentRepo.UpdateStatus(ctx, "XENDIT", event.ProviderRefID, entity.PaymentTransactionStatusSettled, record.WalletTransactionID, &payloadStr)
 		if err != nil {
-			return fmt.Errorf("update payment transaction status: %w", err)
+			return fmt.Errorf("update payment transaction status settled: %w", err)
 		}
 		logger.WithFields(logrus.Fields{"wallet_transaction_id": *record.WalletTransactionID}).Info("withdrawal finalized via webhook")
 
@@ -175,15 +175,25 @@ func (w *withdrawalUsecaseImpl) HandlePayoutWebhook(ctx context.Context, payload
 			if !errors.Is(err, apperror.ErrTransactionAlreadyReversed) {
 				return fmt.Errorf("reverse withdrawal: %w", err)
 			}
-			logger.Debug("withdrawal already reversed, treating as no-op") // hasil retry yang aman, bukan kegagalan
+			logger.Debug("withdrawal already reversed, treating as no-op")
 		}
 		if err := w.paymentRepo.UpdateStatus(ctx, "XENDIT", event.ProviderRefID, entity.PaymentTransactionStatusFailed, record.WalletTransactionID, &payloadStr); err != nil {
-			return fmt.Errorf("update payment transaction status: %w", err)
+			return fmt.Errorf("update payment transaction status failed: %w", err)
 		}
 		logger.WithFields(logrus.Fields{"wallet_transaction_id": *record.WalletTransactionID}).Info("withdrawal reversed via webhook, funds returned to wallet")
 	default:
 		return fmt.Errorf("unhandled payout status: %s", event.Status)
 	}
 
+	return nil
+}
+
+func (w *withdrawalUsecaseImpl) ReceivePayoutWebhook(ctx context.Context, headers http.Header, payload []byte) error {
+	if err := w.gateway.VerifyWebhookSignature(headers); err != nil {
+		return apperror.ErrInvalidWebhookSignature
+	}
+	if err := w.publisher.Publish(ctx, queue.XenditWebhookQueue, payload); err != nil {
+		return fmt.Errorf("publish webhook message: %w", err)
+	}
 	return nil
 }

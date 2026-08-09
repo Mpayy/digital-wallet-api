@@ -19,15 +19,16 @@ import (
 
 // Injectors from wire.go:
 
-func InitializeWorker() (*Worker, error) {
+func InitializeWorker() (*ApplicationWorker, func(), error) {
 	viper := config.NewViper()
-	channel, err := config.NewRabbitMQ(viper)
-	if err != nil {
-		return nil, err
-	}
 	logger := config.NewLogrus(viper)
+	channel, cleanup, err := config.NewRabbitMQ(viper, logger)
+	if err != nil {
+		return nil, nil, err
+	}
+	db, cleanup2 := config.NewGorm(viper, logger)
+	workerInfra := config.NewWorker(channel, logger, viper, db)
 	consumer := queue.NewConsumer(channel, logger)
-	db := config.NewGorm(viper, logger)
 	paymentRepository := repository.NewPaymentRepository(db)
 	paymentCollector := gateway.NewMidtransGateway(viper)
 	walletRepository := repository2.NewWalletRepository(db)
@@ -37,16 +38,22 @@ func InitializeWorker() (*Worker, error) {
 	walletUsecase := usecase.NewWalletUsecase(walletRepository, transactionRepository, idempotencyService, logger)
 	publisher := queue.NewPublisher(channel, logger)
 	paymentUsecase := usecase2.NewPaymentUsecase(paymentRepository, paymentCollector, walletUsecase, idempotencyService, logger, publisher)
-	worker := NewWorker(consumer, paymentUsecase)
-	return worker, nil
+	paymentDisburser := gateway.NewXenditGateway(viper)
+	withdrawalUsecase := usecase2.NewWithdrawalUsecase(paymentRepository, paymentDisburser, walletUsecase, publisher, logger)
+	worker := NewWorker(consumer, paymentUsecase, withdrawalUsecase)
+	applicationWorker := NewApplicationWorker(workerInfra, worker)
+	return applicationWorker, func() {
+		cleanup2()
+		cleanup()
+	}, nil
 }
 
 // wire.go:
 
-var infraSet = wire.NewSet(config.NewViper, config.NewLogrus, config.NewGorm, config.NewRabbitMQ)
+var infraSet = wire.NewSet(config.NewViper, config.NewLogrus, config.NewGorm, config.NewRabbitMQ, config.NewWorker)
 
-var walletSet = wire.NewSet(repository2.NewWalletRepository, repository2.NewTransactionRepository, repository2.NewIdempotencyRepository, usecase.NewIdempotencyService, usecase.NewWalletUsecase, wire.Bind(new(usecase2.WalletTopUpper), new(usecase.WalletUsecase)), wire.Bind(new(usecase2.IdempotencyClaimer), new(usecase.IdempotencyService)))
+var walletSet = wire.NewSet(repository2.NewWalletRepository, repository2.NewTransactionRepository, repository2.NewIdempotencyRepository, usecase.NewIdempotencyService, usecase.NewWalletUsecase, wire.Bind(new(usecase2.WalletTopUpper), new(usecase.WalletUsecase)), wire.Bind(new(usecase2.WalletWithdrawer), new(usecase.WalletUsecase)), wire.Bind(new(usecase2.IdempotencyClaimer), new(usecase.IdempotencyService)))
 
-var paymentSet = wire.NewSet(repository.NewPaymentRepository, gateway.NewMidtransGateway, usecase2.NewPaymentUsecase)
+var paymentSet = wire.NewSet(repository.NewPaymentRepository, gateway.NewMidtransGateway, gateway.NewXenditGateway, usecase2.NewPaymentUsecase, usecase2.NewWithdrawalUsecase)
 
 var pkgSet = wire.NewSet(queue.NewPublisher, queue.NewConsumer)

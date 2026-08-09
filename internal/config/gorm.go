@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-func NewGorm(config *viper.Viper, log *logrus.Logger) *gorm.DB {
+func NewGorm(config *viper.Viper, log *logrus.Logger) (*gorm.DB, func()) {
 	username := config.GetString("DATABASE_USERNAME")
 	password := config.GetString("DATABASE_PASSWORD")
 	host := config.GetString("DATABASE_HOST")
@@ -77,7 +77,16 @@ func NewGorm(config *viper.Viper, log *logrus.Logger) *gorm.DB {
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 	sqlDB.SetConnMaxIdleTime(1 * time.Minute)
 
-	return db
+	log.Info("Connected to database successfully")
+
+	cleanup := func() {
+		if err := sqlDB.Close(); err != nil {
+			log.Errorf("failed to close database connection: %v", err)
+		}
+		log.Info("Database connection closed")
+	}
+
+	return db, cleanup
 }
 
 type logrusWriter struct {

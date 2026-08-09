@@ -18,6 +18,7 @@ import (
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/entity"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/repository"
 	"github.com/Mpayy/digital-wallet-api/internal/wallet/usecase"
+	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/postgres"
@@ -59,18 +60,42 @@ func setupIntegrationDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-func setupRabbitMQ(t *testing.T) *amqp.Channel {
+func setupRabbitMQ(t *testing.T) (*amqp.Connection, string) {
 	url := os.Getenv("TEST_QUEUE_URL")
 	if url == "" {
 		url = "amqp://guest:guest@127.0.0.1:5673/"
 	}
-	conn, err := amqp.Dial(url)
-	require.NoError(t, err)
+	var conn *amqp.Connection
+	var err error
+	for i := 0; i < 10; i++ {
+		conn, err = amqp.Dial(url)
+		if err == nil {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	require.NoError(t, err, "failed to connect to rabbitmq")
+
+	queueName := "test-queue-" + uuid.NewString()
 
 	ch, err := conn.Channel()
 	require.NoError(t, err)
+	err = queue.SetupTopology(ch, []queue.QueueConfig{{Name: queueName, DeliveryLimit: 5}})
+	require.NoError(t, err)
+	_ = ch.Close()
 
-	return ch
+	t.Cleanup(func() {
+		cleanupCh, err := conn.Channel()
+		if err == nil {
+			_, _ = cleanupCh.QueueDelete(queueName, false, false, false)
+			_, _ = cleanupCh.QueueDelete(queueName+".dlq", false, false, false)
+			_ = cleanupCh.ExchangeDelete(queueName+".dlx", false, false)
+			_ = cleanupCh.Close()
+		}
+		_ = conn.Close()
+	})
+
+	return conn, queueName
 }
 
 func seedWallet(t *testing.T, db *gorm.DB, userID uint, balance int64) *entity.Wallet {
@@ -124,7 +149,7 @@ func (s *stubPaymentCollector) ParseWebhookPayload(payload []byte) (*gateway.Web
 	return nil, errors.New("not used in this test")
 }
 
-func setupPaymentUsecase(t *testing.T, db *gorm.DB, stubGW *stubPaymentCollector, ch *amqp.Channel) paymentUC.PaymentUsecase {
+func setupPaymentUsecase(t *testing.T, db *gorm.DB, stubGW *stubPaymentCollector, conn *amqp.Connection) paymentUC.PaymentUsecase {
 	logger := logrus.New()
 	logger.SetOutput(io.Discard)
 	idemRepo := repository.NewIdempotencyRepository(db)
@@ -135,7 +160,29 @@ func setupPaymentUsecase(t *testing.T, db *gorm.DB, stubGW *stubPaymentCollector
 	walletUC := usecase.NewWalletUsecase(wRepo, txRepo, idemService, logger)
 
 	pRepo := paymentRepo.NewPaymentRepository(db)
+	ch, err := conn.Channel()
+	require.NoError(t, err)
 	pub := queue.NewPublisher(ch, logger)
+	t.Cleanup(func() { _ = ch.Close() })
 
 	return paymentUC.NewPaymentUsecase(pRepo, stubGW, walletUC, idemService, logger, pub)
+}
+
+func setupPublish(t *testing.T, conn *amqp.Connection) queue.Publisher {
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+	ch, err := conn.Channel()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = ch.Close() })
+	return queue.NewPublisher(ch, logger)
+}
+
+func setupConsumer(t *testing.T, conn *amqp.Connection) queue.Consumer {
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+	logger.SetLevel(logrus.DebugLevel)
+	ch, err := conn.Channel()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = ch.Close() })
+	return queue.NewConsumer(ch, logger)
 }
