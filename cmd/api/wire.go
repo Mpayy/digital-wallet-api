@@ -87,7 +87,7 @@ var pkgSet = wire.NewSet(
 	queue.NewPublisher,
 )
 
-func InitializeAPI() (*Application, error) {
+func InitializeAPI() (*ApplicationApi, func(), error) {
 	wire.Build(
 		infraSet,
 		authSet,
@@ -99,7 +99,7 @@ func InitializeAPI() (*Application, error) {
 		middlewareSet,
 		pkgSet,
 		NewRouter,
-		NewApplication,
+		NewApplicationApi,
 	)
-	return nil, nil
+	return nil, nil, nil
 }

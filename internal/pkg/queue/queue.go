@@ -9,12 +9,7 @@ import (
 )
 
 const MidtransWebhookQueue = "midtrans.webhooks"
-
-func declareQueue(ch *amqp.Channel, name string) (amqp.Queue, error) {
-	return ch.QueueDeclare(name, true, false, false, false, amqp.Table{
-		amqp.QueueTypeArg: amqp.QueueTypeQuorum,
-	})
-}
+const XenditWebhookQueue = "xendit.webhooks"
 
 //go:generate mockery
 //mockery:generate: true
@@ -39,10 +34,6 @@ func (p *publisherConfig) Publish(ctx context.Context, queueName string, body []
 	logger := p.log.WithFields(logrus.Fields{
 		"queue_name": queueName,
 	})
-
-	if _, err := declareQueue(p.ch, queueName); err != nil {
-		return fmt.Errorf("declare queue: %w", err)
-	}
 
 	err := p.ch.PublishWithContext(ctx, "", queueName, false, false, amqp.Publishing{
 		DeliveryMode: amqp.Persistent,
@@ -83,10 +74,6 @@ func (c *consumerConfig) Consume(ctx context.Context, queueName string, handler 
 		"queue_name": queueName,
 	})
 
-	if _, err := declareQueue(c.ch, queueName); err != nil {
-		return fmt.Errorf("declare queue: %w", err)
-	}
-
 	if err := c.ch.Qos(1, 0, false); err != nil {
 		return fmt.Errorf("set qos: %w", err)
 	}
@@ -99,33 +86,30 @@ func (c *consumerConfig) Consume(ctx context.Context, queueName string, handler 
 	logger.Info("rabbitmq consumer started")
 	defer logger.Info("rabbitmq consumer stopped")
 
-	for {
-		select {
-		case <-ctx.Done():
-			logger.Info("stopping consumer due to context cancellation")
-			return ctx.Err()
-		case msg, ok := <-msgs:
-			if !ok {
-				return fmt.Errorf("rabbitmq delivery channel closed unexpectedly")
+	for msg := range msgs {
+		msgLogger := logger.WithFields(logrus.Fields{
+			"msg_id":      msg.MessageId,
+			"routing_key": msg.RoutingKey,
+		})
+		msgLogger.Debug("received message from queue")
+
+		if err := handler(msg.Body); err != nil {
+			msgLogger.WithError(err).Error("failed to process message, re-queueing")
+			if nackErr := msg.Nack(false, true); nackErr != nil {
+				msgLogger.WithError(nackErr).Error("failed to nack message")
 			}
-
-			msgLogger := logger.WithFields(logrus.Fields{
-				"msg_id":      msg.MessageId,
-				"routing_key": msg.RoutingKey,
-			})
-			msgLogger.Debug("received message from queue")
-
-			if err := handler(msg.Body); err != nil {
-				msgLogger.WithError(err).Error("failed to process message, re-queueing")
-				if nackErr := msg.Nack(false, true); nackErr != nil {
-					msgLogger.WithError(nackErr).Error("failed to nack message")
-				}
-			} else {
-				msgLogger.Debug("message processed successfully, acking")
-				if ackErr := msg.Ack(false); ackErr != nil {
-					msgLogger.WithError(ackErr).Error("failed to ack message")
-				}
+		} else {
+			msgLogger.Debug("message processed successfully, acking")
+			if ackErr := msg.Ack(false); ackErr != nil {
+				msgLogger.WithError(ackErr).Error("failed to ack message")
 			}
 		}
 	}
+
+	if err := ctx.Err(); err != nil {
+		logger.Info("stopping consumer due to context cancellation")
+		return err
+	}
+
+	return fmt.Errorf("rabbitmq delivery channel closed unexpectedly")
 }

@@ -10,7 +10,7 @@ services:
     tmpfs:
       - /var/lib/postgresql/data
   
-  rabbitmq:
+  rabbitmq-test:
     image: rabbitmq:3-management-alpine
     ports:
       - "5673:5672"

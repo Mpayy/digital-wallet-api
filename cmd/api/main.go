@@ -9,6 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/Mpayy/digital-wallet-api/internal/pkg/queue"
 )
 
 // @title           Digital Wallet API
@@ -23,13 +25,23 @@ import (
 // @contact.url                https://github.com/Mpayy
 // @license.name               MIT
 func main() {
-	application, err := InitializeAPI()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	application, cleanup, err := InitializeAPI()
 	if err != nil {
 		log.Fatalf("Failed to initialize API: %v", err)
 	}
+	defer cleanup()
 
 	app := application.App
 	router := application.Router
+
+	err = queue.SetupTopology(app.RabbitMQ, queue.KnownQueues)
+	if err != nil {
+		app.Log.Errorf("Failed to setup topology: %v", err)
+		return
+	}
 
 	router.Setup()
 
@@ -45,13 +57,12 @@ func main() {
 	go func() {
 		app.Log.Infof("Server starting on: %s", addr)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			app.Log.Fatalf("Failed to start server: %v", err)
+			app.Log.Errorf("Failed to start server: %v", err)
+			stop()
 		}
 	}()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	<-ctx.Done()
 
 	app.Log.Infof("Shutting down server...")
 
@@ -59,21 +70,7 @@ func main() {
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		app.Log.Fatalf("Server forced to shutdown: %v", err)
+		app.Log.Errorf("Server forced to shutdown: %v", err)
 	}
 	app.Log.Infof("Server exited properly")
-
-	db, err := app.DB.DB()
-	if err != nil {
-		app.Log.Fatalf("Failed to get database connection: %v", err)
-	}
-	if err := db.Close(); err != nil {
-		app.Log.Fatalf("Failed to close database connection: %v", err)
-	}
-	app.Log.Infof("Database connection closed")
-
-	if err := app.Redis.Close(); err != nil {
-		app.Log.Fatalf("Failed to close redis connection: %v", err)
-	}
-	app.Log.Infof("Redis connection closed")
 }
