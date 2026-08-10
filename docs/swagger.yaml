@@ -681,9 +681,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates a Midtrans Snap payment session for the authenticated user.
-        Returns a redirect URL to complete payment; the wallet is credited asynchronously
-        once Midtrans confirms via webhook, not immediately in this response.
+      description: Creates a Midtrans Snap payment session for the authenticated user
+        and returns a redirect URL. The wallet is NOT credited at this point — crediting
+        happens later, asynchronously, once Midtrans confirms payment via webhook
+        and the queued event is processed by a background worker.
       parameters:
       - description: Client-generated UUID v4, unique per checkout attempt
         in: header
@@ -853,8 +854,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates a withdrawal request for the authenticated user. The withdrawal
-        will be processed asynchronously.
+      description: Debits the authenticated user's wallet immediately and initiates
+        a Xendit payout to the given bank/e-wallet destination. Final settlement (or
+        automatic reversal if the payout fails) is confirmed asynchronously via webhook,
+        processed by a background worker.
       parameters:
       - description: Client-generated UUID v4, unique per withdrawal attempt
         in: header
@@ -943,11 +946,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: Receives asynchronous payment status updates from Midtrans. NOT
-        intended to be called manually — Midtrans invokes this using a payload signed
-        with the Server Key. "Try it out" in this UI will always fail signature verification
-        since it requires a real Midtrans-signed request; documented here for completeness
-        only.
+      description: Accepts asynchronous payment status notifications from Midtrans.
+        Verifies the request signature, then publishes the raw payload to a queue
+        for processing by a background worker — actual wallet crediting happens asynchronously,
+        not within this request. NOT intended to be called manually; documented here
+        for completeness only.
       parameters:
       - description: Midtrans notification payload
         in: body
@@ -965,7 +968,7 @@ paths:
               type: string
             type: object
         "400":
-          description: WEBHOOK_PAYLOAD_TOO_LARGE
+          description: BAD_REQUEST / WEBHOOK_PAYLOAD_TOO_LARGE
           schema:
             allOf:
             - $ref: '#/definitions/response.ErrorResponse'
@@ -975,15 +978,6 @@ paths:
               type: object
         "401":
           description: INVALID_WEBHOOK_SIGNATURE
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.ErrorResponse'
-            - properties:
-                error:
-                  $ref: '#/definitions/apperror.AppError'
-              type: object
-        "404":
-          description: RECORD_NOT_FOUND (unknown provider_ref_id)
           schema:
             allOf:
             - $ref: '#/definitions/response.ErrorResponse'
@@ -1007,11 +1001,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: Receives asynchronous withdrawal status updates from Xendit. NOT
-        intended to be called manually — Xendit triggers this endpoint automatically,
-        including a verification token in the `X-CALLBACK-TOKEN` request header. "Try
-        it out" in this UI will always fail unless a valid `X-CALLBACK-TOKEN` matching
-        your backend configuration is provided; documented here for completeness only.
+      description: Accepts asynchronous withdrawal/payout status notifications from
+        Xendit, verified via the X-CALLBACK-TOKEN header. Publishes the raw payload
+        to a queue for processing by a background worker — wallet finalization/reversal
+        happens asynchronously, not within this request. NOT intended to be called
+        manually; documented here for completeness only.
       parameters:
       - description: Xendit notification payload
         in: body
@@ -1029,7 +1023,7 @@ paths:
               type: string
             type: object
         "400":
-          description: WEBHOOK_PAYLOAD_TOO_LARGE
+          description: BAD_REQUEST / WEBHOOK_PAYLOAD_TOO_LARGE
           schema:
             allOf:
             - $ref: '#/definitions/response.ErrorResponse'
@@ -1039,15 +1033,6 @@ paths:
               type: object
         "401":
           description: INVALID_WEBHOOK_SIGNATURE
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.ErrorResponse'
-            - properties:
-                error:
-                  $ref: '#/definitions/apperror.AppError'
-              type: object
-        "404":
-          description: RECORD_NOT_FOUND (unknown provider_ref_id)
           schema:
             allOf:
             - $ref: '#/definitions/response.ErrorResponse'

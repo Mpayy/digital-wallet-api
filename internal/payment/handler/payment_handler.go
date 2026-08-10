@@ -30,7 +30,7 @@ func NewPaymentHandler(paymentUsecase usecase.PaymentUsecase, validator *validat
 
 // CreateTopUpCheckout godoc
 // @Summary      Create a top-up checkout session
-// @Description  Creates a Midtrans Snap payment session for the authenticated user. Returns a redirect URL to complete payment; the wallet is credited asynchronously once Midtrans confirms via webhook, not immediately in this response.
+// @Description  Creates a Midtrans Snap payment session for the authenticated user and returns a redirect URL. The wallet is NOT credited at this point — crediting happens later, asynchronously, once Midtrans confirms payment via webhook and the queued event is processed by a background worker.
 // @Tags         payment
 // @Accept       json
 // @Produce      json

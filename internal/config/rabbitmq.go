@@ -1,7 +1,9 @@
 package config
 
 import (
+	"crypto/tls"
 	"fmt"
+	"strings"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
@@ -9,7 +11,21 @@ import (
 )
 
 func NewRabbitMQ(config *viper.Viper, log *logrus.Logger) (*amqp.Channel, func(), error) {
-	conn, err := amqp.Dial(config.GetString("RABBITMQ_URL"))
+	rabbitmqURL := config.GetString("RABBITMQ_URL")
+	enableTLS := config.GetBool("RABBITMQ_TLS_ENABLED") // Sesuaikan key env-nya
+
+	var tlsConfig *tls.Config
+
+	// Jika TLS diaktifkan via .env ATAU URL menggunakan CloudAMQP (amqps://)
+	if enableTLS || strings.HasPrefix(rabbitmqURL, "amqps://") {
+		tlsConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
+	}
+
+	conn, err := amqp.DialConfig(rabbitmqURL, amqp.Config{
+		TLSClientConfig: tlsConfig,
+	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("connect to rabbitmq: %w", err)
 	}
