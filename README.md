@@ -5,7 +5,7 @@
 
 A RESTful digital wallet API built with Go, simulating core features of mobile wallet applications like Dana or OVO — covering user registration, wallet top-up, peer-to-peer transfers, withdrawals, and transaction history.
 
-> **Disclaimer:** This is a portfolio/simulation project. It is not a licensed payment system and is not intended for production financial use. The application is not yet deployed; it currently runs locally.
+> **Disclaimer:** This is a portfolio/simulation project. It is not a licensed payment system and is not intended for production financial use. The application is not yet deployed to a cloud environment; it currently runs locally or via Docker Compose.
 
 ---
 
@@ -18,6 +18,7 @@ All dependencies listed below are verified from `go.mod`:
 | [Gin](https://github.com/gin-gonic/gin) | v1.12.0 | HTTP framework |
 | [GORM](https://gorm.io) | v1.31.2 | ORM |
 | [gorm/driver/postgres](https://github.com/go-gorm/postgres) | v1.6.2 | PostgreSQL driver |
+| [amqp091-go](github.com/rabbitmq/amqp091-go) | v1.13.0 | RabbitMQ Client |
 | [go-redis/v9](https://github.com/redis/go-redis) | v9.21.0 | Redis client |
 | [golang-jwt/jwt/v5](https://github.com/golang-jwt/jwt) | v5.3.1 | JWT token |
 | [golang.org/x/crypto](https://pkg.go.dev/golang.org/x/crypto) | v0.53.0 | bcrypt password hashing |
@@ -30,7 +31,10 @@ All dependencies listed below are verified from `go.mod`:
 | [swaggo/swag](https://github.com/swaggo/swag) | v1.16.6 | OpenAPI/Swagger documentation |
 | [mockery](https://github.com/vektra/mockery) | v2 (CLI) | Mock generation for unit tests |
 
-**Infrastructure:** PostgreSQL 16 (Alpine), Redis 7 (Alpine)
+**Infrastructure:** 
+- **Database**: PostgreSQL 16 (Local/Docker) / Neon (Cloud)
+- **Cache**: Redis 7 (Local/Docker) / Upstash (Cloud)
+- **Message Broker**: RabbitMQ 3 (Local/Docker) / CloudAMQP (Cloud)
 
 ---
 
@@ -46,7 +50,14 @@ Handler  →  Usecase  →  Repository
 - **Usecase** — Contains all business logic (idempotency, locking, balance mutation, ownership checks, payment gateway orchestrations). Each domain has its own usecase interface.
 - **Repository** — Data access only. Abstracts GORM queries and Redis calls behind interfaces, making the usecase layer independent of persistence details.
 
-Dependency wiring is handled at startup by **Google Wire** (`wire.go` + generated `wire_gen.go`).
+### Dual-Binary Design
+
+The application is explicitly separated into two running services:
+1. **`cmd/api`**: The synchronous HTTP server handling client requests.
+2. **`cmd/worker`**: A background consumer that processes asynchronous tasks from RabbitMQ.
+
+**Why are webhooks processed asynchronously?**
+Payment gateways (like Midtrans and Xendit) require instant HTTP 200 responses to their webhooks. If the API were to process database-heavy operations (which include `SELECT FOR UPDATE` locks that could block or delay) synchronously, it might cause the gateway to timeout and repeatedly retry the webhook. By separating the concern, `cmd/api` only verifies the webhook's signature and immediately publishes the raw payload to RabbitMQ. The `cmd/worker` then consumes the payload and safely executes the heavy, lock-dependent state updates at its own pace.
 
 ### Domain Boundary & FK Design Decision
 
@@ -57,6 +68,23 @@ The project is split into two bounded contexts:
 
 **Why `wallets.user_id` has no FK to `users.id`:**
 This is an intentional architectural decision. In real-world financial systems, identity/auth is frequently a separate service or an external Identity Provider (IDP). Enforcing a DB-level FK from `wallets` to `users` would create a hard coupling between two contexts that are designed to be independent. The wallet domain only needs to know a `user_id` exists — it does not own the user record. This boundary makes the auth domain replaceable without touching the financial schema.
+
+---
+
+## Async Processing & Reliability
+
+Robust background processing is critical for financial consistency. The webhook pipeline handles external payment updates (Midtrans/Xendit) using RabbitMQ to guarantee processing delivery without impacting HTTP performance.
+
+**Pipeline Flow:**
+1. **Verify (API):** The webhook hits the API. The API validates the signature/token.
+2. **Publish (API):** Once valid, the raw payload is published to a specific RabbitMQ queue (e.g., `midtrans.webhooks`).
+3. **Consume (Worker):** The worker picks up the message using a `qos` configuration to process tasks safely.
+4. **Process (Worker):** Database transactions and balance updates happen here. On success, the message is `Ack`ed.
+
+**Dead-Letter Queue (DLQ):**
+To ensure reliability without creating infinite retry loops, the RabbitMQ topology is configured with `x-delivery-limit` (set to 5 retries). 
+If a message fails to process (e.g., database is down, or unexpected bug) and receives a `Nack` more than 5 times, it is automatically routed to a Dead Letter Exchange (DLX) and placed in a Dead Letter Queue (DLQ). 
+This allows developers to inspect, debug, and manually redeliver permanently failing messages without clogging the main processing pipeline.
 
 ---
 
@@ -73,14 +101,16 @@ To simulate a real-world fintech product, the API integrates with two different 
 2. The server calls Midtrans to generate a Snap checkout URL and saves a `PENDING` `payment_transactions` record.
 3. User completes the payment on Midtrans.
 4. Midtrans sends an asynchronous callback to `POST /webhooks/midtrans`.
-5. The server verifies the signature, looks up the pending transaction, and credits the user's wallet via the internal `WalletUsecase.TopUp`, leveraging the same idempotency mechanism to prevent double-crediting.
+5. The API verifies the signature and publishes the payload to RabbitMQ.
+6. The Worker processes the payload, crediting the user's wallet via `WalletUsecase.TopUp`, leveraging idempotency.
 
 ### Withdrawal Flow (Xendit)
 1. Client calls `POST /wallets/withdraw` with an `Idempotency-Key` and bank details.
 2. The server instantly debits the user's wallet (locking the funds) and issues a Payout request to Xendit.
-3. If Xendit immediately fails the request, the withdrawal is reversed (funds are returned to the wallet). Otherwise, it stays `PENDING`.
+3. If Xendit immediately fails the request, the withdrawal is reversed. Otherwise, it stays `PENDING`.
 4. Xendit processes the disbursement and sends an asynchronous callback to `POST /webhooks/xendit`.
-5. The server verifies the `X-CALLBACK-TOKEN`. If the payout succeeded, the withdrawal is finalized. If it failed, the wallet transaction is reversed, safely refunding the user.
+5. The API verifies the `X-CALLBACK-TOKEN` and publishes the payload to RabbitMQ.
+6. The Worker processes the payload: if succeeded, the withdrawal is finalized. If failed, the wallet transaction is reversed, safely refunding the user.
 
 ---
 
@@ -147,12 +177,12 @@ All protected routes require `Authorization: Bearer <token>` header.
 | `POST` | `/wallets/transfer` | ✅ JWT | Transfer to another user. Requires `Idempotency-Key`. |
 | `POST` | `/wallets/withdraw` | ✅ JWT | Initiate withdrawal via Xendit. Requires `Idempotency-Key`. |
 
-### Webhooks
+### Webhooks (Async)
 
 | Method | Path | Auth | Notes |
 |--------|------|------|-------|
-| `POST` | `/webhooks/midtrans` | ❌ (unsigned) | Midtrans notification callback. Verified via payload signature. |
-| `POST` | `/webhooks/xendit` | ❌ (header token) | Xendit payout callback. Verified via `X-CALLBACK-TOKEN` header. |
+| `POST` | `/webhooks/midtrans` | ❌ (unsigned) | Midtrans notification callback. Verified via payload signature, then pushed to RabbitMQ. |
+| `POST` | `/webhooks/xendit` | ❌ (header token) | Xendit payout callback. Verified via `X-CALLBACK-TOKEN` header, then pushed to RabbitMQ. |
 
 ### Transactions
 
@@ -167,8 +197,8 @@ All protected routes require `Authorization: Bearer <token>` header.
 
 Continuous Integration is enforced via GitHub Actions:
 
-- **CI Workflow (`ci.yml`)**: Runs on every push/PR to `main`. Executes `go vet`, `golangci-lint`, standard unit tests (`go test`), and builds the application.
-- **Integration Test Workflow (`integration.yml`)**: Runs on every push/PR to `main`. Spins up a PostgreSQL 16 container, runs migrations, and executes the `-tags=integration -race` test suite against the real database container to verify concurrency safety mechanisms.
+- **CI Workflow (`ci.yml`)**: Runs on every push/PR to `main`. Executes `go vet`, `golangci-lint`, standard unit tests (`go test`), and builds both binaries (`api` and `worker`).
+- **Integration Test Workflow (`integration.yml`)**: Runs on every push/PR to `main`. Spins up **PostgreSQL 16** and **RabbitMQ** containers, runs migrations, and executes the `-tags=integration -race` test suite to verify concurrency and message brokering mechanisms against real services.
 
 ---
 
@@ -194,13 +224,14 @@ cp .env.example .env
 
 Edit `.env` and fill in all required values (including Midtrans and Xendit keys).
 
-### 2. Start infrastructure services
+### 2. Start all services using Docker Compose (Recommended)
+
+The provided `docker-compose.yml` uses a multi-stage Dockerfile to build and run both the API and Worker containers alongside PostgreSQL, Redis, and RabbitMQ.
 
 ```bash
-docker compose up -d postgres redis
+docker compose up --build -d
 ```
-
-Wait a few seconds for PostgreSQL to finish initializing before running migrations.
+*Note: Wait a few seconds for PostgreSQL to finish initializing before running migrations.*
 
 ### 3. Run database migrations
 
@@ -210,21 +241,20 @@ make migrate-up
 # migrate -path migrations -database "postgres://postgres:postgres@127.0.0.1:5432/digital_wallet_api?sslmode=disable&x-multi-statement=true" up
 ```
 
-### 4. Run the application
+### 4. Running locally without Docker Compose
 
-**Option A — with Docker Compose (recommended):**
+If you prefer running the Go code on your host machine, you must run both binaries simultaneously. Requires PostgreSQL, Redis, and RabbitMQ to be accessible at the hosts/ports defined in `.env`.
 
-```bash
-docker compose up --build
-```
-
-**Option B — run locally:**
-
+**Terminal 1 (API Server):**
 ```bash
 go run ./cmd/api
 ```
 
-Requires PostgreSQL and Redis to be running and accessible at the hosts/ports defined in `.env`.
+**Terminal 2 (Background Worker):**
+```bash
+go run ./cmd/worker
+```
+*Note: If you only run the API, webhooks will be accepted and queued, but the actual balance updates will never execute until the worker is started.*
 
 ---
 
@@ -250,29 +280,16 @@ Payment statuses: `PENDING`, `SETTLED`, `FAILED`
 
 ### Unit Tests
 
-Run with the standard Go test command — no infrastructure required. All external dependencies (GORM, Redis, Gateways, etc.) are mocked using [Mockery](https://github.com/vektra/mockery)-generated mocks.
+Run with the standard Go test command — no infrastructure required. All external dependencies (GORM, Redis, RabbitMQ, Gateways, etc.) are mocked using [Mockery](https://github.com/vektra/mockery)-generated mocks.
 
 ```bash
 make test-unit
 ```
-
-**Coverage (verified from file count):**
-
-| Module | File | Test Cases |
-|---|---|---|
-| `wallet/usecase` | `wallet_usecase_test.go` | 18 |
-| `wallet/usecase` | `transfer_usecase_test.go` | 25 |
-| `wallet/usecase` | `idempotency_service_test.go` | 18 |
-| `wallet/usecase` | `transaction_usecase_test.go` | 14 |
-| `payment/usecase` | `payment_usecase_test.go` | 21 |
-| `payment/usecase` | `withdrawal_usecase_test.go` | 20 |
-| `auth/usecase` | `auth_usecase_test.go` | 19 |
-| `auth/middleware` | `jwt_middleware_test.go` | 12 |
-| **Total** | | **147** |
+*(Currently covering 147 test cases across Auth, Wallet, and Payment domains)*
 
 ### Integration Tests
 
-Require Docker. Uses a **dedicated PostgreSQL instance on port 5433** via `docker-compose.test.yml` (separate from the dev DB, using `tmpfs` for speed). Run with:
+Require Docker. Uses dedicated **PostgreSQL** and **RabbitMQ** instances on isolated ports via `integration.yml` logic. Run with:
 
 ```bash
 make test-integration
@@ -280,19 +297,11 @@ make test-integration
 
 The `-race` flag is passed intentionally to catch Go-level data races in addition to the database-level correctness assertions.
 
-**Integration test scenarios:**
-
-| Test | File | What it proves |
-|---|---|---|
-| `TestConcurrentTopUp_NoLostUpdate` | `wallet_topup_test.go` | 20 goroutines top-up the same wallet concurrently with unique idempotency keys. Asserts final balance and transaction rows verify no write is lost under `SELECT FOR UPDATE`. |
-| `TestConcurrentTransfer_OppositeDirection_NoDeadlock` | `wallet_transfer_test.go` | 50 iterations of A→B and B→A transfers fired simultaneously (100 goroutines). Asserts no deadlock (15s timeout), total money is conserved, and exactly 200 transaction rows exist. |
-| `TestConcurrentTopUp_SameIdempotencyKey_OnlyAppliedOnce` | `wallet_idempotency_test.go` | 20 goroutines fire the same top-up with the **same idempotency key**. Asserts balance increases only once, 1 transaction row exists, and all successful responses share the same `transaction_id`. |
-
 ---
 
 ## Project Status
 
-This project is **in active development**. The core API is functional and the critical financial consistency mechanisms (locking, idempotency, atomic transactions) are implemented and tested. The application logic is mature but it's currently awaiting full deployment.
+This project is **in active development**. The core API is functional, and the critical financial consistency mechanisms (locking, idempotency, atomic transactions, reliable asynchronous messaging) are implemented and tested.
 
 ### ✅ Completed
 
@@ -302,21 +311,19 @@ This project is **in active development**. The core API is functional and the cr
 - Peer-to-peer transfer with ordered lock acquisition (deadlock prevention) and idempotency
 - Transaction history with pagination and filtering by type/date range
 - Transaction detail with ownership enforcement
-- Structured logging (logrus) across all layers
-- Dockerized with Docker Compose (3-service stack: app, postgres, redis)
-- **147 unit test cases** using Mockery mocks
-- **3 integration tests** covering concurrent operations against real PostgreSQL with `-race` flag
-- Deadlock reproduced, documented, and fixed
 - Integration with **Midtrans** for top-up collections
 - Integration with **Xendit** for withdrawal payouts
-- Automated CI and Integration Test pipelines via GitHub Actions
+- **Async webhook processing via RabbitMQ (Dual-Binary architecture)**
+- Reliable dead-letter queue (DLQ) topology for failing background jobs
 - Migration to PostgreSQL
 - Swagger/OpenAPI documentation
+- Dockerized with Docker Compose (5-service stack: api, worker, postgres, redis, rabbitmq)
+- Automated CI and Integration Test pipelines via GitHub Actions
+- 147 unit test cases and 3 heavy concurrent integration tests
 
 ### 🔧 In Progress / Planned
 
 | Item | Status |
 |---|---|
-| Async webhook processing via message broker (RabbitMQ) | 📋 Planned |
 | Retry mechanism for database deadlock errors | 📋 Planned (defensive) |
 | TTL / reclaim mechanism for idempotency keys stuck in `PROCESSING` status | 📋 Planned |
