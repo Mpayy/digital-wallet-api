@@ -28,15 +28,14 @@ func NewWebhookHandler(paymentUsecase usecase.PaymentUsecase, withdrawalUsecase 
 
 // MidtransNotification godoc
 // @Summary      Midtrans payment notification webhook
-// @Description  Receives asynchronous payment status updates from Midtrans. NOT intended to be called manually — Midtrans invokes this using a payload signed with the Server Key. "Try it out" in this UI will always fail signature verification since it requires a real Midtrans-signed request; documented here for completeness only.
+// @Description  Accepts asynchronous payment status notifications from Midtrans. Verifies the request signature, then publishes the raw payload to a queue for processing by a background worker — actual wallet crediting happens asynchronously, not within this request. NOT intended to be called manually; documented here for completeness only.
 // @Tags         payment
 // @Accept       json
 // @Produce      json
 // @Param        request body dto.MidtransWebhookPayload true "Midtrans notification payload"
 // @Success      200 {object} map[string]string
-// @Failure      400 {object} response.ErrorResponse{error=apperror.AppError} "WEBHOOK_PAYLOAD_TOO_LARGE"
+// @Failure      400 {object} response.ErrorResponse{error=apperror.AppError} "BAD_REQUEST / WEBHOOK_PAYLOAD_TOO_LARGE"
 // @Failure      401 {object} response.ErrorResponse{error=apperror.AppError} "INVALID_WEBHOOK_SIGNATURE"
-// @Failure      404 {object} response.ErrorResponse{error=apperror.AppError} "RECORD_NOT_FOUND (unknown provider_ref_id)"
 // @Failure      500 {object} response.ErrorResponse{error=apperror.AppError} "INTERNAL_SERVER_ERROR"
 // @Router       /webhooks/midtrans [post]
 func (h *webhookHandlerImpl) MidtransNotification(ctx *gin.Context) {
@@ -69,15 +68,14 @@ func (h *webhookHandlerImpl) MidtransNotification(ctx *gin.Context) {
 
 // XenditNotification godoc
 // @Summary      Xendit withdrawal notification webhook
-// @Description  Receives asynchronous withdrawal status updates from Xendit. NOT intended to be called manually — Xendit triggers this endpoint automatically, including a verification token in the `X-CALLBACK-TOKEN` request header. "Try it out" in this UI will always fail unless a valid `X-CALLBACK-TOKEN` matching your backend configuration is provided; documented here for completeness only.
+// @Description  Accepts asynchronous withdrawal/payout status notifications from Xendit, verified via the X-CALLBACK-TOKEN header. Publishes the raw payload to a queue for processing by a background worker — wallet finalization/reversal happens asynchronously, not within this request. NOT intended to be called manually; documented here for completeness only.
 // @Tags         withdrawal
 // @Accept       json
 // @Produce      json
 // @Param        request body dto.XenditPayoutWebhookPayload true "Xendit notification payload"
 // @Success      200 {object} map[string]string
-// @Failure      400 {object} response.ErrorResponse{error=apperror.AppError} "WEBHOOK_PAYLOAD_TOO_LARGE"
+// @Failure      400 {object} response.ErrorResponse{error=apperror.AppError} "BAD_REQUEST / WEBHOOK_PAYLOAD_TOO_LARGE"
 // @Failure      401 {object} response.ErrorResponse{error=apperror.AppError} "INVALID_WEBHOOK_SIGNATURE"
-// @Failure      404 {object} response.ErrorResponse{error=apperror.AppError} "RECORD_NOT_FOUND (unknown provider_ref_id)"
 // @Failure      500 {object} response.ErrorResponse{error=apperror.AppError} "INTERNAL_SERVER_ERROR"
 // @Router       /webhooks/xendit [post]
 func (h *webhookHandlerImpl) XenditNotification(ctx *gin.Context) {

@@ -27,7 +27,7 @@ func NewWithdrawalHandler(withdrawalUsecase usecase.WithdrawalUsecase, validator
 
 // CreateWithdrawal godoc
 // @Summary      Create a withdrawal request
-// @Description  Creates a withdrawal request for the authenticated user. The withdrawal will be processed asynchronously.
+// @Description  Debits the authenticated user's wallet immediately and initiates a Xendit payout to the given bank/e-wallet destination. Final settlement (or automatic reversal if the payout fails) is confirmed asynchronously via webhook, processed by a background worker.
 // @Tags         withdrawal
 // @Accept       json
 // @Produce      json

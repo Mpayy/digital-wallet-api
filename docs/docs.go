@@ -771,7 +771,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Creates a Midtrans Snap payment session for the authenticated user. Returns a redirect URL to complete payment; the wallet is credited asynchronously once Midtrans confirms via webhook, not immediately in this response.",
+                "description": "Creates a Midtrans Snap payment session for the authenticated user and returns a redirect URL. The wallet is NOT credited at this point — crediting happens later, asynchronously, once Midtrans confirms payment via webhook and the queued event is processed by a background worker.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1085,7 +1085,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Creates a withdrawal request for the authenticated user. The withdrawal will be processed asynchronously.",
+                "description": "Debits the authenticated user's wallet immediately and initiates a Xendit payout to the given bank/e-wallet destination. Final settlement (or automatic reversal if the payout fails) is confirmed asynchronously via webhook, processed by a background worker.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1246,7 +1246,7 @@ const docTemplate = `{
         },
         "/webhooks/midtrans": {
             "post": {
-                "description": "Receives asynchronous payment status updates from Midtrans. NOT intended to be called manually — Midtrans invokes this using a payload signed with the Server Key. \"Try it out\" in this UI will always fail signature verification since it requires a real Midtrans-signed request; documented here for completeness only.",
+                "description": "Accepts asynchronous payment status notifications from Midtrans. Verifies the request signature, then publishes the raw payload to a queue for processing by a background worker — actual wallet crediting happens asynchronously, not within this request. NOT intended to be called manually; documented here for completeness only.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1279,7 +1279,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "WEBHOOK_PAYLOAD_TOO_LARGE",
+                        "description": "BAD_REQUEST / WEBHOOK_PAYLOAD_TOO_LARGE",
                         "schema": {
                             "allOf": [
                                 {
@@ -1298,24 +1298,6 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "INVALID_WEBHOOK_SIGNATURE",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.ErrorResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "error": {
-                                            "$ref": "#/definitions/apperror.AppError"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "404": {
-                        "description": "RECORD_NOT_FOUND (unknown provider_ref_id)",
                         "schema": {
                             "allOf": [
                                 {
@@ -1355,7 +1337,7 @@ const docTemplate = `{
         },
         "/webhooks/xendit": {
             "post": {
-                "description": "Receives asynchronous withdrawal status updates from Xendit. NOT intended to be called manually — Xendit triggers this endpoint automatically, including a verification token in the ` + "`" + `X-CALLBACK-TOKEN` + "`" + ` request header. \"Try it out\" in this UI will always fail unless a valid ` + "`" + `X-CALLBACK-TOKEN` + "`" + ` matching your backend configuration is provided; documented here for completeness only.",
+                "description": "Accepts asynchronous withdrawal/payout status notifications from Xendit, verified via the X-CALLBACK-TOKEN header. Publishes the raw payload to a queue for processing by a background worker — wallet finalization/reversal happens asynchronously, not within this request. NOT intended to be called manually; documented here for completeness only.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1388,7 +1370,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "WEBHOOK_PAYLOAD_TOO_LARGE",
+                        "description": "BAD_REQUEST / WEBHOOK_PAYLOAD_TOO_LARGE",
                         "schema": {
                             "allOf": [
                                 {
@@ -1407,24 +1389,6 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "INVALID_WEBHOOK_SIGNATURE",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.ErrorResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "error": {
-                                            "$ref": "#/definitions/apperror.AppError"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "404": {
-                        "description": "RECORD_NOT_FOUND (unknown provider_ref_id)",
                         "schema": {
                             "allOf": [
                                 {
