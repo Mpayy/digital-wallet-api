@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -45,9 +46,13 @@ func main() {
 
 	router.Setup()
 
-	host := app.Config.GetString("APP_HOST")
-	port := app.Config.GetInt("APP_PORT")
-	addr := fmt.Sprintf("%s:%d", host, port)
+	// host := app.Config.GetString("APP_HOST")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = strconv.Itoa(app.Config.GetInt("APP_PORT"))
+	}
+
+	addr := fmt.Sprintf(":%s", port)
 
 	server := &http.Server{
 		Addr:    addr,
